@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>长安的荔枝</title>
+<style>
+  @font-face { font-family: "SerifSC"; src: url("./fonts/NotoSerifSC-Regular.subset.woff2") format("woff2"); font-weight: 400; }
+  @font-face { font-family: "SerifSC"; src: url("./fonts/NotoSerifSC-Bold.subset.woff2") format("woff2"); font-weight: 700; }
+  @font-face { font-family: "Brush"; src: url("./fonts/MaShanZheng.subset.woff2") format("woff2"); }
+  @font-face { font-family: "Garamond"; src: url("./fonts/CormorantGaramond.woff2") format("woff2"); font-weight: 300 700; }
+  @font-face { font-family: "Garamond"; src: url("./fonts/CormorantGaramond-Italic.woff2") format("woff2"); font-weight: 300 700; font-style: italic; }
+  html, body { margin: 0; height: 100%; background: #140d07; overflow: hidden; }
+  #stage { position: relative; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: #140d07; }
+  #stage > canvas { position: absolute; left: 0; top: 0; display: block; }
+  #scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 300px; pointer-events: none; background: linear-gradient(180deg, rgba(20,13,6,0) 0%, rgba(20,13,6,.40) 58%, rgba(20,13,6,.64) 100%); }
+  #cap { position: absolute; left: 0; right: 0; bottom: 74px; text-align: center; color: #f6eedd; will-change: opacity, transform, filter; }
+  #cap b { display: block; font: 400 44px/1.25 "SerifSC", serif; letter-spacing: .16em; text-indent: .16em; text-shadow: 0 2px 18px rgba(0,0,0,.65); }
+  #cap hr { width: 56px; height: 1px; margin: 18px auto 14px; border: 0; background: linear-gradient(90deg, rgba(184,52,42,0), #c9493c, rgba(184,52,42,0)); }
+  #cap i { display: block; font: italic 400 30px/1.3 "Garamond", serif; letter-spacing: .02em; color: rgba(246,238,221,.86); text-shadow: 0 2px 14px rgba(0,0,0,.65); padding: 0 120px; }
+  #status { position: absolute; left: 20px; top: 20px; color: #ccc; font: 16px sans-serif; }
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 6px 12px; background: rgba(0,0,0,.6); color: #ccc; font: 13px sans-serif; display: none; }
+  #bar input { width: 70%; vertical-align: middle; }
+</style>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }</script>
+</head>
+<body>
+<div id="stage">
+  <div id="status">载入中…</div>
+  <canvas id="hud" width="1920" height="1080" style="z-index:3"></canvas>
+  <div id="scrim" style="z-index:4"></div>
+  <div id="cap" style="z-index:5"><b></b><hr><i></i></div>
+</div>
+<div id="bar">t = <span id="tv">0.00</span>s <input id="scrub" type="range" min="0" max="1" step="0.001" value="0"> <button id="play">暂停</button></div>
+<script type="module">
+  import { renderer } from "./src/engine.js";
+  renderer.domElement.style.zIndex = 1;
+  document.getElementById("stage").prepend(renderer.domElement);
+  await import("./src/main.js");
+</script>
+</body>
+</html>

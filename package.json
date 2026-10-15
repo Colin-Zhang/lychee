@@ -1,0 +1,14 @@
+{
+  "name": "changan-lychee",
+  "private": true,
+  "type": "module",
+  "description": "长安的荔枝：荔枝从岭南运到长安（古地图叙事短片，中英字幕，逐帧渲染）",
+  "scripts": {
+    "preview": "node serve.mjs",
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^23.0.0",
+    "three": "^0.170.0"
+  }
+}
