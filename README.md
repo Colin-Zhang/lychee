@@ -17,6 +17,10 @@ node debug.mjs 31,58,85.5       # 打开页面，打印报错，截这几个时�
 ```
 没有 BGM：成片是无声的，传抖音时在 App 里自己配乐。
 
+**文件大小**：默认码率封顶 8Mbps，整片约 140MB；想更小加 `--maxrate 5M`（约 90MB）。已经渲好的大文件不用重渲，直接再压一遍：
+`ffmpeg -i out/lychee.mp4 -c:v libx264 -preset slow -crf 21 -maxrate 8M -bufsize 16M -pix_fmt yuv420p -movflags +faststart out/lychee-抖音.mp4`。
+渲完以后 `out/frames`（几千张 jpg，一两个 G）可以删掉。
+
 ## 代码
 
 | 文件 | 内容 |

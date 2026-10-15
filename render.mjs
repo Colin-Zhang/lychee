@@ -1,4 +1,4 @@
-// 逐帧渲染：node render.mjs [--fps 30] [--from 0] [--to 10] [--out out/lychee.mp4] [--every 1]
+// 逐帧渲染：node render.mjs [--fps 30] [--from 0] [--to 10] [--out out/lychee.mp4] [--every 1] [--crf 21] [--maxrate 8M]
 //   --every 10  每 10 帧取一帧（快速看效果）；--frames-only 只出 jpg 不合成视频
 //   Chrome 路径：环境变量 CHROME_PATH；不设就按系统找常见位置（Windows 的 Chrome / Edge、macOS、Linux）
 import puppeteer from "puppeteer-core";
@@ -50,6 +50,8 @@ await browser.close(); srv.close();
 console.log(`出了 ${k} 帧，用时 ${((Date.now() - t0) / 1000).toFixed(0)} 秒 → ${dir}`);
 if (!FRAMES_ONLY) {
   mkdirSync("out", { recursive: true });
-  const r = spawnSync("ffmpeg", ["-y", "-v", "error", "-framerate", String(FPS / EVERY), "-i", join(dir, "f%05d.jpg"), "-c:v", "libx264", "-crf", "17", "-preset", "slow", "-pix_fmt", "yuv420p", OUT], { stdio: "inherit" });
+  // 码率封顶 8Mbps（2 分 24 秒约 140MB）：画面有胶片颗粒，不封顶的话 crf 再低也会到几百兆；抖音上传后本来也会重新压
+  const CRF = arg("crf", "21"), MAXRATE = arg("maxrate", "8M");
+  const r = spawnSync("ffmpeg", ["-y", "-v", "error", "-framerate", String(FPS / EVERY), "-i", join(dir, "f%05d.jpg"), "-c:v", "libx264", "-preset", "slow", "-crf", CRF, "-maxrate", MAXRATE, "-bufsize", "16M", "-pix_fmt", "yuv420p", "-movflags", "+faststart", OUT], { stdio: "inherit" });
   if (r.status === 0) console.log("视频 →", OUT); else console.error("ffmpeg 合成失败（装了 ffmpeg 吗？），帧在", dir);
 }
