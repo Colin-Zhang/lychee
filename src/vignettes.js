@@ -43,7 +43,8 @@ class RedDust {
 // ───────── 开场 / 结尾：山水、黄土路、一骑红尘、滚出来的荔枝 ─────────
 export function buildRoad() {
   const st = new Stage(30), M = 1.14;
-  const skyDay = T(canvasOf((g) => skyLayer(g, { dusk: 0 }))), skyDusk = T(canvasOf((g) => skyLayer(g, { dusk: 1 })));
+  // 直接画出片尾的黄昏程度，避免混合不同太阳高度的天空时出现重影。
+  const skyDay = T(canvasOf((g) => skyLayer(g, { dusk: 0 }))), skyDusk = T(canvasOf((g) => skyLayer(g, { dusk: 0.55 })));
   const skyMat = new THREE.ShaderMaterial({ uniforms: { tA: { value: skyDay }, tB: { value: skyDusk }, uMix: { value: 0 } }, vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`, fragmentShader: `uniform sampler2D tA, tB; uniform float uMix; varying vec2 vUv; void main(){ gl_FragColor = vec4(mix(texture2D(tA, vUv).rgb, texture2D(tB, vUv).rgb, uMix), 1.0); }` });
   st.layer(skyMat, -1400, M + 0.1);
   st.layer(basic(T(canvasOf((g) => farLayer(g)))), -900, M + 0.06);
@@ -64,7 +65,7 @@ export function buildRoad() {
   const riderAt = (t, a, b) => roadAt(lerp(0.66, 0.02, easeOut(seg(t, a, b))));
   st.update = (t) => {
     const ending = t > 100;
-    skyMat.uniforms.uMix.value = ending ? 0.55 : 0;
+    skyMat.uniforms.uMix.value = ending ? 1 : 0;
     const a = ending ? 130.9 : 0.2, b = ending ? 136.2 : 6.2;
     const rp = riderAt(t, a, b), rk = lerp(28, 330, Math.pow(rp.depth, 1.15));
     rider.visible = t < b + 0.1;
