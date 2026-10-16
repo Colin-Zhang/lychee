@@ -13,9 +13,10 @@ import { buildDecay4, buildPlate, buildBook, buildOrchard4, buildTube, buildStat
 import { CAPS, SEGS, DUR, POEM, MINI } from "./timeline.js";
 import { Overlay } from "./labels.js";
 import { brushText } from "./art.js";
+import { drawWatermark } from "./watermark.js";
 
 const Q = new URLSearchParams(location.search), RENDER = Q.has("render"), STRIDE = Number(Q.get("dem") || 2);
-await Promise.all([document.fonts.load('40px "Brush"'), document.fonts.load('40px "SerifSC"'), document.fonts.load('700 40px "SerifSC"'), document.fonts.load('30px "NotoSerif"'), document.fonts.load('italic 30px "Garamond"'), document.fonts.load('900 40px "WM"')]);
+await Promise.all([document.fonts.load('40px "Brush"'), document.fonts.load('40px "SerifSC"'), document.fonts.load('700 40px "SerifSC"'), document.fonts.load('30px "NotoSerif"'), document.fonts.load('italic 30px "Garamond"')]);
 const status = (s) => { const el = document.getElementById("status"); if (el) el.textContent = s; };
 const stage = document.getElementById("stage");
 
@@ -102,8 +103,8 @@ function drawHud(t, info, mini) {
   if (info.dayA) stampBox(1434, 84, 150, 108, `第${CN[info.day] ?? info.day}日`, `Day ${info.day}`, info.dayA);
   if (info.noteA) { h.save(); h.globalAlpha = info.noteA; h.font = '400 26px "SerifSC"'; h.fillStyle = "rgba(239,226,194,.95)"; h.textAlign = "right"; h.shadowColor = "rgba(0,0,0,.6)"; h.shadowBlur = 8; h.fillText("推算：五千二百里，日行约五百里", 1874, 228); h.restore(); }
   if (mini) drawMini(t, mini.prog, mini.a);
-  // 账号水印：右上角、全片常驻（和频道其他片子同一个样式：青绿 #4e9597、思源圆体 Heavy；计数章往下让了 28 像素）
-  h.save(); h.font = '900 40px "WM"'; h.fillStyle = "#4e9597"; h.textAlign = "right"; h.textBaseline = "top"; h.fillText("@钳沿AI实验室", W - 33, 21); h.restore();
+  // 账号水印：右上角、全片常驻（宋体暖白字 + 朱红小印，见 watermark.js；计数章往下让了 28 像素）
+  drawWatermark(h, W);
   // 诗的出处（片尾右侧竖排）
   if (t >= POEM[0] - 0.2 && t < POEM[1] + 0.6) {
     const a = Math.min(seg(t, POEM[0], POEM[0] + 0.6), 1 - seg(t, POEM[1], POEM[1] + 0.6));

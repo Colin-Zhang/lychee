@@ -51,6 +51,6 @@ node tools/shake.mjs meiling,ganjiang                                # 量航拍
 | `data/`、`tools/dem.py` | 真实高程（大庾岭 17 米一格，其余 32–35 米一格，外围 130 米一格）和下载脚本；数据来自 AWS Terrain Tiles（SRTM 等公开数据），下载时清掉了零星的尖刺和坑 |
 | `tools/landmap.mjs` + `tools/landmap.py` | 立体场景的俯视检查图（路、河、大水面、每公里刻度），挑镜头位置用 |
 
-改了字幕或标签里的字，跑一次 `tools-subset.sh` 重新裁剪字体（需要 fonttools 和原字体文件，说明在脚本开头）。字体都是 OFL 开源授权（思源宋体、马善政体、Cormorant Garamond；右上角账号水印“@钳沿AI实验室”用思源圆体 Heavy，只收了这几个字），许可证在 `fonts/`。
+改了字幕或标签里的字，跑一次 `tools-subset.sh` 重新裁剪字体（需要 fonttools 和原字体文件，说明在脚本开头）。字体都是 OFL 开源授权（思源宋体、马善政体、Cormorant Garamond），许可证在 `fonts/`。右上角的账号水印（宋体暖白字 + 朱红小印“钳沿”）在 `src/watermark.js`。
 
 更早的版本（按小说讲的 2 分 24 秒版、`字幕-第一稿` / `第三稿`）在 git 历史里。
