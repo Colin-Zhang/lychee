@@ -54,6 +54,7 @@ if (!FRAMES_ONLY) {
   mkdirSync("out", { recursive: true });
   // 码率封顶 8Mbps（2 分 24 秒约 140MB）：画面有胶片颗粒，不封顶的话 crf 再低也会到几百兆；抖音上传后本来也会重新压
   const CRF = arg("crf", "21"), MAXRATE = arg("maxrate", "8M");
-  const r = spawnSync("ffmpeg", ["-y", "-v", "error", "-framerate", String(FPS / EVERY), "-i", join(dir, "f%05d.jpg"), "-c:v", "libx264", "-preset", "slow", "-crf", CRF, "-maxrate", MAXRATE, "-bufsize", "16M", "-pix_fmt", "yuv420p", "-movflags", "+faststart", OUT], { stdio: "inherit" });
+  // JPEG 是全范围；显式转换并标记视频范围，避免 ffmpeg 沿用全范围而输出 yuvj420p。
+  const r = spawnSync("ffmpeg", ["-y", "-v", "error", "-framerate", String(FPS / EVERY), "-i", join(dir, "f%05d.jpg"), "-vf", "scale=in_range=full:out_range=tv", "-c:v", "libx264", "-preset", "slow", "-crf", CRF, "-maxrate", MAXRATE, "-bufsize", "16M", "-pix_fmt", "yuv420p", "-color_range", "tv", "-movflags", "+faststart", OUT], { stdio: "inherit" });
   if (r.status === 0) console.log("视频 →", OUT); else console.error("ffmpeg 合成失败（装了 ffmpeg 吗？），帧在", dir);
 }
