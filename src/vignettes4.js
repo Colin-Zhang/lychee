@@ -3,8 +3,9 @@
 import * as THREE from "three";
 import { tex, Stage, basic, revealMaterial } from "./engine.js";
 import { SW, SH, RES, peeledScene } from "./scenes2d.js";
-import { mk, rng, clamp, lerp, silk, smooth, stroke, fillPath, brushText, seal, lycheeArt, lychee, figureArt, INK, VERM } from "./art.js";
+import { mk, rng, clamp, lerp, silk, smooth, stroke, fillPath, brushText, seal, lycheeArt, figureArt, INK, VERM } from "./art.js";
 import { drawRider, drawStandHorse, drawFallenHorse } from "./horse.js";
+import { openingLychee } from "./lychee-detail.js";
 
 const seg = (t, a, b) => clamp((t - a) / (b - a));
 const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
@@ -33,7 +34,7 @@ export function buildDecay4() {
     for (let i = 0; i < 11; i++) { const x = SW * (0.18 + i * 0.065); g.save(); g.translate(x, 100 + Math.sin(i * 1.7) * 26); g.rotate(-0.7 + (i % 3) * 0.55); g.fillStyle = i % 2 ? "#4f6e38" : "#5d7d42"; g.beginPath(); g.ellipse(0, 54, 22, 74, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = "rgba(30,40,20,.6)"; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -18); g.lineTo(0, 124); g.stroke(); g.restore(); }
   });
   st.layer(basic(T(bg)), -80, 1.14);
-  const states = [0, 1, 2, 3].map((a) => T(lychee(768, { ripe: 1, age: a, seed: 21 })));
+  const states = [0, 1, 2, 3].map((age) => T(openingLychee(1536, { age, seed: 21 })));
   const lyMat = new THREE.ShaderMaterial({ uniforms: { t0: { value: states[0] }, t1: { value: states[1] }, t2: { value: states[2] }, t3: { value: states[3] }, uAge: { value: 0 } }, vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `uniform sampler2D t0, t1, t2, t3; uniform float uAge; varying vec2 vUv; void main(){ vec4 a = texture2D(t0, vUv), b = texture2D(t1, vUv), c = texture2D(t2, vUv), d = texture2D(t3, vUv); gl_FragColor = uAge < 1.0 ? mix(a, b, uAge) : uAge < 2.0 ? mix(b, c, uAge - 1.0) : mix(c, d, uAge - 2.0); }`, transparent: true, depthWrite: false });
   const s = st.pxScale(0, 1.12), ly = new THREE.Mesh(new THREE.PlaneGeometry(1100 * s, 1100 * s), lyMat); st.scene.add(ly);
@@ -44,7 +45,8 @@ export function buildDecay4() {
     const drop = easeOut(seg(t, 0.35, 0.95)), bounce = Math.sin(seg(t, 0.95, 1.4) * Math.PI) * 0.03;
     ly.position.copy(st.px(SW * 0.5, lerp(520, 760, drop) - bounce * 400, 4)); ly.rotation.z = drop * 0.14;
     lyMat.uniforms.uAge.value = clamp(seg(t, 1.1, 1.8) + seg(t, 2.2, 2.9) + seg(t, 3.2, 3.9), 0, 3);
-    ly.scale.setScalar(1 - seg(t, 3.2, 3.9) * 0.05);
+    // 原来的 5% 网格缩小和 6% 贴图萎缩合在这里，保持幅度并消除双轮廓。
+    ly.scale.setScalar(lerp(1, 0.95 * 0.94, seg(t, 3.2, 3.9)));
     slash.material.opacity = Math.sin(seg(t, 0.2, 0.55) * Math.PI);
     words.forEach((m) => (m.material.opacity = easeOut(seg(t, m.userData.t0, m.userData.t0 + 0.45))));
     days.forEach((m, i) => { const t0 = m.userData.t0, t1 = i < 2 ? days[i + 1].userData.t0 : 99; m.material.opacity = seg(t, t0, t0 + 0.25) * (1 - seg(t, t1, t1 + 0.15)); m.scale.setScalar(lerp(1.4, 1, easeOut(seg(t, t0, t0 + 0.25)))); });
