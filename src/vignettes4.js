@@ -233,7 +233,7 @@ function tubeArt(g) {
   g.fillStyle = "#c9c27a"; g.beginPath(); g.ellipse(L / 2, 0, 70, r, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = "#2b220f"; g.beginPath(); g.ellipse(L / 2, 0, 52, r - 22, 0, 0, Math.PI * 2); g.fill();
   g.restore();
-  return { mouth: [SW * 0.47 + Math.cos(-0.24) * 750, SH * 0.58 + Math.sin(-0.24) * 750], ang: -0.24 };
+  return { mouth: [SW * 0.47 + Math.cos(-0.24) * 750, SH * 0.58 + Math.sin(-0.24) * 750], ang: -0.24, rx: 70, ry: r };
 }
 export function buildTube() {
   const st = new Stage(30);
@@ -241,20 +241,55 @@ export function buildTube() {
   const [mx, my] = info.mouth;
   const branchT = TM(canvasOf((g) => { stroke(g, smooth([[20, 200], [200, 190], [380, 200]], 6), 12, 8, "#4a3420"); for (let i = 0; i < 4; i++) { g.save(); g.translate(120 + i * 60, 170 - (i % 2) * 40); g.rotate(-0.8 + i * 0.5); g.fillStyle = "#4f6e38"; g.beginPath(); g.ellipse(0, -30, 20, 56, 0, 0, Math.PI * 2); g.fill(); g.restore(); } for (let i = 0; i < 6; i++) lycheeArt(g, 260 + (i % 3) * 52, 230 + Math.floor(i / 3) * 50, 30, { ripe: 1, seed: 70 + i, leaf: false, stem: false }); }, 420, 340, 1));
   const branch = sprite(st, branchT, 640, 520, { z: 6, anchor: [0.95, 0.6] });
-  const plugT = TM(canvasOf((g) => { const gr = g.createLinearGradient(0, 0, 0, 340); gr.addColorStop(0, "#8a6a44"); gr.addColorStop(1, "#5a4028"); g.fillStyle = gr; g.beginPath(); g.ellipse(60, 170, 52, 150, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = "rgba(30,20,10,.6)"; g.lineWidth = 3; g.stroke(); }, 120, 340, 1));
-  const plug = sprite(st, plugT, 120, 340, { z: 8 });
-  const mudT = TM(canvasOf((g) => { g.fillStyle = "#7b5a3c"; g.beginPath(); for (let a = 0; a <= 24; a++) { const t = (a / 24) * Math.PI * 2, rr = 1 + Math.sin(a * 2.3) * 0.08; g.lineTo(90 + Math.cos(t) * 80 * rr, 200 + Math.sin(t) * 180 * rr); } g.fill(); }, 180, 400, 1));
-  const mud = sprite(st, mudT, 180, 400, { z: 9, opacity: 0 });
+  // 塞子与筒口共用椭圆尺寸：略宽于内孔，保留少量外唇，并画出压入后的厚边。
+  const plugT = TM(canvasOf((g) => {
+    const rx = info.rx - 7, ry = info.ry - 10, cx = 110, cy = 200;
+    g.fillStyle = "#57402a"; g.beginPath(); g.ellipse(cx, cy, rx + 2, ry + 2, 0, 0, Math.PI * 2); g.fill();
+    const side = g.createLinearGradient(cx - rx, 0, cx + rx + 10, 0); side.addColorStop(0, "#765532"); side.addColorStop(1, "#49311e");
+    g.fillStyle = side; g.beginPath(); g.moveTo(cx, cy - ry); g.lineTo(cx + 10, cy - ry); g.lineTo(cx + 10, cy + ry); g.lineTo(cx, cy + ry); g.closePath(); g.fill();
+    const face = g.createLinearGradient(cx - rx, cy - ry, cx + rx, cy + ry);
+    face.addColorStop(0, "#bb9661"); face.addColorStop(0.38, "#a78250"); face.addColorStop(1, "#755331");
+    g.beginPath(); g.ellipse(cx + 10, cy, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = face; g.fill();
+    g.save(); g.clip();
+    for (let i = 1; i <= 9; i++) {
+      g.strokeStyle = i % 2 ? "rgba(77,46,23,.20)" : "rgba(225,196,142,.24)"; g.lineWidth = 1.5;
+      g.beginPath(); g.ellipse(cx + 7, cy + 7, rx * i / 10, ry * i / 10, 0.035, 0, Math.PI * 2); g.stroke();
+    }
+    g.restore(); g.strokeStyle = "rgba(58,36,20,.75)"; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(cx + 10, cy, rx, ry, 0, 0, Math.PI * 2); g.stroke();
+  }, 220, 400, 1));
+  // 几乎与竹筒共面，推镜头时接缝不会因视差重新张开。
+  const plug = sprite(st, plugT, 220, 400, { z: 0.5, opacity: 0 });
+  const mudT = TM(canvasOf((g) => {
+    const cx = 110, cy = 200;
+    g.beginPath(); g.ellipse(cx, cy, info.rx + 7, info.ry + 6, 0, 0, Math.PI * 2);
+    g.ellipse(cx + 10, cy, info.rx - 16, info.ry - 27, 0, 0, Math.PI * 2);
+    const gr = g.createLinearGradient(0, cy - info.ry, 180, cy + info.ry);
+    gr.addColorStop(0, "#b49160"); gr.addColorStop(0.4, "#947047"); gr.addColorStop(1, "#65482e");
+    g.fillStyle = gr; g.fill("evenodd"); g.save(); g.clip("evenodd");
+    const R = rng(49);
+    for (let i = 0; i < 500; i++) {
+      g.fillStyle = i % 2 ? "rgba(62,40,23,.12)" : "rgba(220,185,130,.17)";
+      g.fillRect(cx - 90 + R() * 180, cy - 185 + R() * 370, 1 + R() * 3, 1 + R() * 2);
+    }
+    g.restore();
+    g.strokeStyle = "rgba(231,204,156,.42)"; g.lineWidth = 2.5;
+    g.beginPath(); g.ellipse(cx, cy, info.rx + 4, info.ry + 3, 0, Math.PI * 1.02, Math.PI * 1.77); g.stroke();
+  }, 220, 400, 1));
+  const mud = sprite(st, mudT, 220, 400, { z: 0.6, opacity: 0 });
   const stampT = TM(seal("封", 220, { white: true }));
-  const stamp = sprite(st, stampT, 150, 150, { z: 10, opacity: 0 });
+  const stamp = sprite(st, stampT, 100, 132, { z: 0.7, opacity: 0 });
   const w1 = sprite(st, T(canvasOf((g) => brushText(g, "不透风", 70, 60, 120, { vertical: true, color: INK }), 140, 420, 1)), 140, 420, { z: 12, opacity: 0 }).at(mx - 640, my - 250);
   const w2 = sprite(st, T(canvasOf((g) => brushText(g, "不见光", 70, 60, 120, { vertical: true, color: INK }), 140, 420, 1)), 140, 420, { z: 12, opacity: 0 }).at(mx - 450, my - 200);
   st.update = (t) => {
-    const slide = ease(seg(t, 0.2, 1.2)), into = seg(t, 0.9, 1.3);
-    branch.at(lerp(mx + 700, mx + 40, slide), lerp(my - 180, my - 10, slide)); branch.rotation.z = info.ang; branch.material.opacity = 1 - into;
-    const pk = easeOut(seg(t, 1.3, 1.8)); plug.at(lerp(mx + 220, mx, pk), lerp(my - 60, my, pk)); plug.material.opacity = seg(t, 1.25, 1.4); plug.rotation.z = info.ang;
-    mud.at(mx + 4, my); mud.rotation.z = info.ang; mud.material.opacity = seg(t, 1.9, 2.1);
-    const sk = easeOut(seg(t, 2.2, 2.5)); stamp.at(mx + 4, my); stamp.material.opacity = sk; stamp.scale.setScalar(lerp(1.7, 1, sk)); stamp.rotation.z = info.ang;
+    const slide = ease(seg(t, 0.2, 1.05)), into = seg(t, 0.82, 1.12);
+    // Canvas 的 y 轴向下，Three.js 向上，平面旋转必须取反才能贴合筒口。
+    const angle = -info.ang, ax = Math.cos(info.ang), ay = Math.sin(info.ang);
+    branch.at(lerp(mx + 700, mx + 40, slide), lerp(my - 180, my - 10, slide)); branch.rotation.z = angle; branch.material.opacity = 1 - into;
+    const pk = easeOut(seg(t, 1.08, 1.48)), offset = lerp(240, 0, pk);
+    plug.at(mx + ax * offset, my + ay * offset); plug.material.opacity = seg(t, 1.05, 1.13); plug.rotation.z = angle;
+    mud.at(mx, my); mud.rotation.z = angle; mud.material.opacity = seg(t, 1.5, 1.8);
+    const sk = easeOut(seg(t, 2.2, 2.5)); stamp.at(mx + ax * 10, my + ay * 10); stamp.material.opacity = sk; stamp.scale.setScalar(lerp(1.25, 1, sk)); stamp.rotation.z = angle;
     w1.material.opacity = easeOut(seg(t, 1.5, 1.9)); w2.material.opacity = easeOut(seg(t, 2.4, 2.8));
     const u = seg(t, 0, 3.2), f = st.px(mx - 100, my, 0); cam(st, lerp(0, f.x * 0.5, ease(u)), lerp(0, f.y * 0.5, ease(u)), lerp(st.D, st.D * 0.8, ease(u)), lerp(0, f.x * 0.5, ease(u)), lerp(0, f.y * 0.5, ease(u)));
     st.look = { blur: 0.0035, focus: 0.5, band: 0.2 };
