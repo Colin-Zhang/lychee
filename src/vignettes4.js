@@ -37,7 +37,7 @@ export function buildDecay4() {
     fragmentShader: `uniform sampler2D t0, t1, t2, t3; uniform float uAge; varying vec2 vUv; void main(){ vec4 a = texture2D(t0, vUv), b = texture2D(t1, vUv), c = texture2D(t2, vUv), d = texture2D(t3, vUv); gl_FragColor = uAge < 1.0 ? mix(a, b, uAge) : uAge < 2.0 ? mix(b, c, uAge - 1.0) : mix(c, d, uAge - 2.0); }`, transparent: true, depthWrite: false });
   const s = st.pxScale(0, 1.12), ly = new THREE.Mesh(new THREE.PlaneGeometry(1100 * s, 1100 * s), lyMat); st.scene.add(ly);
   const slash = sprite(st, T(canvasOf((g) => stroke(g, smooth([[40, 200], [300, 120], [560, 40]], 8), 4, 26, "rgba(255,250,236,1)"), 600, 240)), 600, 240, { z: 8, opacity: 0 }).at(SW * 0.5, 230);
-  const words = [["色变", 1.3], ["香变", 2.4], ["味变", 3.4]].map(([w, t0], i) => { const m = sprite(st, T(canvasOf((g) => brushText(g, w, 120, 260, 180, { vertical: true, color: i === 0 ? VERM : INK }), 240, 560)), 240, 560, { z: 10, opacity: 0 }); m.at(i === 1 ? 1880 : i === 0 ? 700 : 1960, 700 + (i === 2 ? 180 : 0)); m.userData.t0 = t0; return m; });
+  const words = [["色变", 1.3], ["香变", 2.4], ["味变", 3.4]].map(([w, t0], i) => { const m = sprite(st, T(canvasOf((g) => brushText(g, w, 120, 260, 180, { vertical: true, color: i === 0 ? VERM : INK }), 240, 560)), 240, 560, { z: 10, opacity: 0 }); m.at(i === 1 ? 1880 : i === 0 ? 700 : 2120, 700 + (i === 2 ? 60 : 0)); m.userData.t0 = t0; return m; });
   const days = ["第一日", "第二日", "第三日"].map((d, i) => { const m = sprite(st, T(canvasOf((g) => { g.fillStyle = "rgba(178,40,32,.9)"; g.fillRect(8, 8, 164, 484); brushText(g, d, 90, 92, 120, { vertical: true, color: "#f3e6c8" }); }, 180, 500)), 144, 400, { z: 12, opacity: 0 }); m.at(2300, 420); m.userData.t0 = [1.1, 2.2, 3.2][i]; return m; });
   st.update = (t) => {
     const drop = easeOut(seg(t, 0.35, 0.95)), bounce = Math.sin(seg(t, 0.95, 1.4) * Math.PI) * 0.03;
@@ -322,7 +322,8 @@ export function buildStation() {
     const bx = t < 4.45 ? gateX + 220 : gateX + 220 + Math.pow(seg(t, 4.45, 7.2), 1.2) * 2600; B.visible = t >= 4.45; fr(B, bx - pan * 0, by + 6, 430, false, t);
     const tk = ease(seg(t, 4.0, 4.45)), tx = lerp(ax - 40, gateX + 180, tk), ty = lerp(by - 250, by - 250, tk) - Math.sin(tk * Math.PI) * 90;
     tube.visible = t > 3.95 && t < 4.5; tube.at(tx, ty);
-    li.at(worldX((xs[0] + xs[1]) / 2), by + 120); li.material.opacity = seg(t, 5.6, 6.0);
+    // 标尺放在驿站上方，避开字幕和底部暗角。
+    li.at(worldX((xs[0] + xs[1]) / 2), by - 420); li.material.opacity = seg(t, 5.6, 6.0);
     st.camera.position.set(0, 0, st.D * lerp(1, 0.94, seg(t, 0, 4))); st.camera.lookAt(0, 0, 0);
     st.look = { blur: 0.0025, focus: 0.62, band: 0.25 };
   };
@@ -374,11 +375,31 @@ function fallenArt(g) {
   g.fillStyle = "#2a2622"; g.fillRect(0, SH * 0.84, SW, SH * 0.16);
   // 枯树
   stroke(g, smooth([[SW * 0.82, SH * 0.84], [SW * 0.81, SH * 0.6], [SW * 0.84, SH * 0.42]], 6), 30, 10, "#1e1a17"); for (const [a, l] of [[-0.9, 160], [0.7, 140], [-0.3, 120], [1.1, 90]]) stroke(g, [[SW * 0.82, SH * 0.58], [SW * 0.82 + Math.sin(a) * l, SH * 0.58 - Math.cos(a) * l]], 9, 2, "#1e1a17");
-  // 倒在路边的马（侧躺，四腿伸着）
-  g.save(); g.translate(SW * 0.44, SH * 0.84); g.scale(2.6, 2.6); g.fillStyle = "#16120f";
-  fillPath(g, smooth([[-90, -6], [-70, -34], [-20, -44], [40, -42], [76, -30], [96, -20], [130, -26], [150, -18], [146, -6], [118, -4], [90, -2], [40, 2], [-40, 2]], 5, true), "#16120f");
-  for (const [x0, a] of [[-60, -0.3], [-44, -0.1], [40, 0.25], [56, 0.45]]) stroke(g, [[x0, -10], [x0 + Math.sin(a) * 30 + 20, -6], [x0 + 44, -2]], 7, 5, "#16120f");
-  stroke(g, smooth([[-88, -10], [-110, -6], [-128, 2]], 4), 7, 2, "#16120f");
+  // 浅色路面衬出马的暗轮廓；抬高主体，给下方字幕留出空间。
+  const road = g.createLinearGradient(0, SH * 0.66, 0, SH); road.addColorStop(0, "#b3a087"); road.addColorStop(1, "#67594b");
+  g.fillStyle = road; g.beginPath(); g.moveTo(0, SH * 0.87);
+  g.bezierCurveTo(SW * 0.18, SH * 0.82, SW * 0.26, SH * 0.66, SW * 0.46, SH * 0.66);
+  g.bezierCurveTo(SW * 0.65, SH * 0.65, SW * 0.76, SH * 0.8, SW, SH * 0.85);
+  g.lineTo(SW, SH); g.lineTo(0, SH); g.closePath(); g.fill();
+  // 倒在路边的马：四肢分开弯折，保留可辨认的耳、吻、鬃、尾。
+  g.save(); g.translate(SW * 0.44, SH * 0.66); g.scale(2.6, 2.6);
+  const horseInk = "#19130f", rim = "#b6a082";
+  const legs = [
+    [[-68, -4], [-99, 19], [-79, 47], [-65, 48]],
+    [[-46, 4], [-69, 27], [-43, 59], [-28, 57]],
+    [[26, 7], [59, 29], [87, 48], [103, 44]],
+    [[46, 3], [82, 18], [114, 35], [130, 30]],
+  ];
+  for (let i = 0; i < legs.length; i++) {
+    stroke(g, legs[i], 14, 12, rim);
+    stroke(g, legs[i], 10, 8, horseInk);
+    stroke(g, legs[i].slice(-2), 14, 12, horseInk);
+  }
+  const body = smooth([[-92, -10], [-85, -39], [-55, -58], [-7, -61], [38, -54], [64, -42], [83, -48], [106, -33], [126, -14], [132, -19], [133, -34], [139, -21], [143, -37], [149, -18], [168, -11], [184, 2], [181, 15], [165, 18], [143, 8], [121, 5], [99, 8], [78, 17], [32, 20], [-26, 19], [-70, 9]], 5, true);
+  stroke(g, body, 4, 4, rim); fillPath(g, body, horseInk);
+  stroke(g, smooth([[-87, -24], [-112, -16], [-133, -1], [-153, 3]], 4), 11, 3, horseInk);
+  for (let i = 0; i < 5; i++) stroke(g, [[59 + i * 8, -42 + i * 2], [55 + i * 9, -57 + i * 4]], 5, 1.5, horseInk);
+  stroke(g, [[154, -5], [160, -3]], 2, 2, rim);
   g.restore();
   silk(g, SW, SH, { tone: null, vign: 0.45, seed: 64, fibers: 0.5 });
 }
