@@ -3,22 +3,23 @@
 import * as THREE from "three";
 import { Stage, tex } from "./engine.js";
 import { buildLand } from "./land.js";
-import { rng, perlin, fbm, clamp, lerp, smoothstep } from "./landform.js";
+import { rng, perlin, fbm, clamp, lerp, smoothstep, Field } from "./landform.js";
 import * as K from "./shanshui.js";
 import { RouteRibbon } from "./route3d.js";
-import { riderArt, boatmanArt, mk } from "./art.js";
+import { boatmanArt, mk } from "./art.js";
+import { drawRider } from "./horse.js";
 import { Overlay } from "./labels.js";
 
 const seg = (t, a, b) => clamp((t - a) / (b - a));
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
 // 单调三次插值（关键帧之间不过冲）
-export function pchip(xs, ys) {
+export function pchip(xs, ys, { extrapolate = false } = {}) {
   const n = xs.length, d = [], m = new Array(n).fill(0);
   for (let i = 0; i < n - 1; i++) d.push((ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]));
   for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (3 * (xs[i + 1] - xs[i - 1])) / ((2 * xs[i + 1] - xs[i] - xs[i - 1]) / d[i - 1] + (xs[i + 1] + xs[i] - 2 * xs[i - 1]) / d[i]);
   m[0] = d[0] ?? 0; m[n - 1] = d[n - 2] ?? 0;
-  return (x) => { if (x <= xs[0]) return ys[0]; if (x >= xs[n - 1]) return ys[n - 1]; let i = 0; while (x > xs[i + 1]) i++; const h = xs[i + 1] - xs[i], t = (x - xs[i]) / h, t2 = t * t, t3 = t2 * t; return (2 * t3 - 3 * t2 + 1) * ys[i] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * ys[i + 1] + (t3 - t2) * h * m[i + 1]; };
+  return (x) => { if (x <= xs[0]) return extrapolate ? ys[0] + m[0] * (x - xs[0]) : ys[0]; if (x >= xs[n - 1]) return extrapolate ? ys[n - 1] + m[n - 1] * (x - xs[n - 1]) : ys[n - 1]; let i = 0; while (x > xs[i + 1]) i++; const h = xs[i + 1] - xs[i], t = (x - xs[i]) / h, t2 = t * t, t3 = t2 * t; return (2 * t3 - 3 * t2 + 1) * ys[i] + (t3 - 2 * t2 + t) * h * m[i] + (-2 * t3 + 3 * t2) * ys[i + 1] + (t3 - t2) * h * m[i + 1]; };
 }
 
 /**
@@ -77,7 +78,7 @@ export function buildScene3D(dem, far, cfg, look) {
   const showRoute = look.route?.show !== false; if (showRoute) route.addTo(scene);
   const sRoadEnd = rPts.length ? route.cum[rPts.length - 1] : 0, sWater0 = wPts.length ? route.cum[rPts.length] : 0;
   // ── 骑手、影子、尘土
-  const rider = road && look.rider !== false ? new K.Card(U, K.sheetTex(12, 512, (g, ph, s) => riderArt(g, s * 0.5, s * 0.92, s / 240, ph, { cargo: "tube" })), 12, { w: 8, h: 8, foot: 0.08 }) : null;
+  const rider = road && look.rider !== false ? new K.Card(U, K.sheetTex(16, 512, (g, ph, s) => drawRider(g, s * 0.52, s * 0.92, s / 275, ph, { cargo: "tube" }), { cols: 4 }), 16, { w: 7.2, h: 7.2, foot: 0.08, cols: 4 }) : null;
   const blob = mk(128, 64), bg = blob.getContext("2d"), gr = bg.createRadialGradient(64, 32, 2, 64, 32, 60); gr.addColorStop(0, "rgba(30,24,16,.5)"); gr.addColorStop(1, "rgba(30,24,16,0)"); bg.fillStyle = gr; bg.fillRect(0, 0, 128, 64);
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 2.4).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex(blob), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 })); shadow.renderOrder = 5;
   const dust = new K.Puffs(U, 16, { color: look.dustCol ?? "#dccaa2" });
@@ -98,31 +99,44 @@ export function buildScene3D(dem, far, cfg, look) {
   const sNear = ([lon, lat]) => { const [x, z] = L.proj(lon, lat); let bi = 0, bd = Infinity; route.pts.forEach((p, i) => { const d = (p[0] - x) ** 2 + (p[2] - z) ** 2; if (d < bd) { bd = d; bi = i; } }); return route.cum[bi]; };
   const R = { sTop, sRoadEnd, sWater0, len: route.length, sNear, L };
   // 平滑过的路线（定镜头朝向用）
-  const SP = route.pts, SC = route.cum, nP = SP.length, sig = 45, smx = new Float32Array(nP), smz = new Float32Array(nP);
+  const SP = route.pts, SC = route.cum, nP = SP.length, sig = 45, smx = new Float32Array(nP), smz = new Float32Array(nP), smy = new Float32Array(nP);
   { const ker = []; for (let k = -3 * sig; k <= 3 * sig; k++) ker.push(Math.exp(-(k * k) / (2 * sig * sig)));
-    for (let i = 0; i < nP; i++) { let x = 0, z = 0, w = 0; for (let k = -3 * sig; k <= 3 * sig; k++) { const j = Math.min(nP - 1, Math.max(0, i + k)), ww = ker[k + 3 * sig]; x += SP[j][0] * ww; z += SP[j][2] * ww; w += ww; } smx[i] = x / w; smz[i] = z / w; } }
-  const smAt = (s) => { let lo = 0, hi = nP - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (SC[m] < s) lo = m; else hi = m; } const f = clamp((s - SC[lo]) / (SC[hi] - SC[lo] || 1)); return [lerp(smx[lo], smx[hi], f), lerp(smz[lo], smz[hi], f)]; };
-  const pathDir = (s) => { const a = smAt(s - 150), b = smAt(s + 150), dx = b[0] - a[0], dz = b[1] - a[1], d = Math.hypot(dx, dz) || 1; return [dx / d, dz / d]; };
+    for (let i = 0; i < nP; i++) { let x = 0, y = 0, z = 0, w = 0; for (let k = -3 * sig; k <= 3 * sig; k++) { const j = Math.min(nP - 1, Math.max(0, i + k)), ww = ker[k + 3 * sig]; x += SP[j][0] * ww; y += SP[j][1] * ww; z += SP[j][2] * ww; w += ww; } smx[i] = x / w; smy[i] = y / w; smz[i] = z / w; } }
+  const smAt = (s) => { let lo = 0, hi = nP - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (SC[m] < s) lo = m; else hi = m; } const f = clamp((s - SC[lo]) / (SC[hi] - SC[lo] || 1)); return [lerp(smx[lo], smx[hi], f), lerp(smz[lo], smz[hi], f), lerp(smy[lo], smy[hi], f)]; };
+  // 镜头离地的下限：先在 150 米一格上取周围 300 米内的最高点，再糊一下——山脊从镜头底下过去时不会一顿一顿
+  const CLR = (() => { const cell = 90, cx = Math.ceil((rect.x1 - rect.x0) / cell) + 1, cz = Math.ceil((rect.z1 - rect.z0) / cell) + 1, a = new Float32Array(cx * cz);
+    for (let j = 0; j < cz; j++) for (let i = 0; i < cx; i++) { const x = rect.x0 + i * cell, z = rect.z0 + j * cell; let m = F.at(x, z); for (let k = 0; k < 8; k++) { const an = (k / 8) * Math.PI * 2; for (const r of [60, 120]) m = Math.max(m, F.at(x + Math.cos(an) * r, z + Math.sin(an) * r)); } a[j * cx + i] = m; }
+    const f = Field.from(a, cx, cz, rect.x0, rect.z0, cell); f.h = f.blur(1); return f; })();
+  const MARGIN = look.clearance ?? 30;
+  const pathDir = (s, r = 150) => { const a = smAt(s - r), b = smAt(s + r), dx = b[0] - a[0], dz = b[1] - a[1], d = Math.hypot(dx, dz) || 1; return [dx / d, dz / d]; };
+  // 镜头的朝向跟“大方向”：线头走得越快，看得越远（走 1 公里 / 秒时看前后各约 1.5 公里），山谷里的小弯不再让镜头左右摆
+  const headDir = (t) => { const s = S_(t), spd = Math.abs(S_(t + 0.05) - S_(t - 0.05)) / 0.1; return pathDir(s, clamp(spd * 1.5, 150, 2200)); };
   const KEYS = look.keys(R), T = KEYS.map((k) => k[0]), colF = (i) => pchip(T, KEYS.map((k) => k[i] ?? 0));
-  const S_ = colF(1), DIST = colF(2), HGT = colF(3), YAW = colF(4), UU = colF(5), VV = colF(6), FOV = colF(7), HOLD = colF(8);
+  // 线头位置在镜头开始之前 / 结束之后按原来的速度往外延，镜头平滑时不会在头尾一顿
+  const S0 = pchip(T, KEYS.map((k) => k[1]), { extrapolate: true }), S_ = (t) => clamp(S0(t), 0, route.length), DIST = colF(2), HGT = colF(3), YAW = colF(4), UU = colF(5), VV = colF(6), FOV = colF(7), HOLD = colF(8);
   const DUR = T[T.length - 1];
   const groundMax = (x, z, r) => { let m = ground(x, z); for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; m = Math.max(m, ground(x + Math.cos(a) * r, z + Math.sin(a) * r)); } return m; };
+  // 跟拍的基准点：线头走得快时用平滑过的路线（山路的小弯不晃镜头），慢下来再贴回真正的线头
+  const baseAt = (t) => { const s = S_(t), h = route.at(s / route.length), sm = smAt(s), spd = Math.abs(S_(t + 0.05) - S_(t - 0.05)) / 0.1, w = clamp((spd - 40) / 260); return [lerp(h.x, sm[0], w), lerp(h.y, sm[2], w), lerp(h.z, sm[1], w)]; };
+  const clearAt = (x, z) => (x > rect.x0 && x < rect.x1 && z > rect.z0 && z < rect.z1 ? CLR.at(x, z) : groundMax(x, z, 120));
   const follow = (t) => {
-    t = clamp(t, 0, DUR);
-    const s = S_(t), h = route.at(s / route.length), [dx, dz] = pathDir(s), y = (YAW(t) * Math.PI) / 180, c = Math.cos(y), sn = Math.sin(y);
-    const bx = -dx * c - dz * sn, bz = dx * sn - dz * c, cx = h.x + bx * DIST(t), cz = h.z + bz * DIST(t);
-    return [cx, Math.max(h.y + HGT(t), groundMax(cx, cz, 170) + 45), cz];
+    // 线头位置按外延的时间算（头尾平滑不顿），镜头参数在关键帧以外保持不变
+    const [hx, hy, hz] = baseAt(t), [dx, dz] = headDir(t), y = (YAW(t) * Math.PI) / 180, c = Math.cos(y), sn = Math.sin(y);
+    const bx = -dx * c - dz * sn, bz = dx * sn - dz * c, cx = hx + bx * DIST(t), cz = hz + bz * DIST(t);
+    return [cx, Math.max(hy + HGT(t), clearAt(cx, cz) + MARGIN), cz];
   };
   const tHold = T[KEYS.findIndex((k) => (k[8] ?? 0) > 0)] ?? DUR, held = follow(tHold);
   const raw = (t) => { const f = follow(t), k = HOLD(clamp(t, 0, DUR)); if (k <= 0) return f; const dt = Math.max(0, t - tHold), [dx, dz] = pathDir(S_(tHold)); const o = [held[0] + dx * dt * 120, held[1] + dt * 35, held[2] + dz * dt * 120]; return [lerp(f[0], o[0], k), lerp(f[1], o[1], k), lerp(f[2], o[2], k)]; };
-  const GW = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6].map((k) => [k, Math.exp(-(k * k) / (2 * 2.6 * 2.6))]);
-  const camAt = (t) => { let x = 0, y = 0, z = 0, w = 0; for (const [k, ww] of GW) { const p = raw(t + k * 0.07); x += p[0] * ww; y += p[1] * ww; z += p[2] * ww; w += ww; } return V3(x / w, y / w, z / w); };
+  // 镜头位置在时间上做高斯平均（前后各 0.64 秒），朝向的目标点也一样平均
+  const GW = Array.from({ length: 17 }, (_, i) => i - 8).map((k) => [k, Math.exp(-(k * k) / (2 * 3.2 * 3.2))]);
+  const camAt = (t) => { let x = 0, y = 0, z = 0, w = 0; for (const [k, ww] of GW) { const p = raw(t + k * 0.08); x += p[0] * ww; y += p[1] * ww; z += p[2] * ww; w += ww; } return V3(x / w, y / w, z / w); };
+  const aimAt = (t) => { let x = 0, y = 0, z = 0, w = 0; for (const [k, ww] of GW) { if (Math.abs(k) > 4) continue; const p = baseAt(t + k * 0.06); x += p[0] * ww; y += p[1] * ww; z += p[2] * ww; w += ww; } return V3(x / w, y / w + 2, z / w); };
   const occluded = (c, p) => { for (let i = 1; i < 48; i++) { const f = i / 48, x = lerp(c.x, p.x, f), z = lerp(c.z, p.z, f), y = lerp(c.y, p.y + 3, f); if (ground(x, z) > y + 2) return true; } return false; };
   const LABELS = (look.labels ? look.labels(R) : []).map((lb) => { let pos; if (Array.isArray(lb.at)) { const [x, z] = L.proj(...lb.at); pos = V3(x, ground(x, z) + (lb.up ?? 5), z); } else { const p = route.at(lb.at.s / route.length); pos = V3(p.x, p.y + (lb.up ?? 5), p.z); } return { ...lb, pos }; });
   const win = (t, a, b, f = 0.45) => Math.min(seg(t, a, a + f), 1 - seg(t, b - f, b));
   const placeRider = (t, s, speed) => {
     const p = roadAt(s), [dx, dz] = dirAt(s, 9);
-    rider.mesh.visible = shadow.visible = true; rider.place(p.x, p.y + 0.05, p.z, dx, dz, t * 26, camera);
+    rider.mesh.visible = shadow.visible = true; rider.place(p.x, p.y + 0.05, p.z, dx, dz, t * 35, camera);
     shadow.position.set(p.x, p.y + 0.15, p.z); shadow.rotation.y = -Math.atan2(dz, dx);
     const P = [];
     for (let i = 0; i < 16; i++) { const tb = (Math.floor(t / 0.1) - i) * 0.1, age = t - tb; if (age < 0) continue; const q = roadAt(s - age * speed), w = (rng(Math.floor(tb * 10) + 99)() - 0.5) * 2; P.push([q.x - dz * w, q.y + 0.7 + age * 1.4, q.z + dx * w, 1.6 + age * 3, 0.36 * Math.pow(1 - age / 1.6, 2)]); }
@@ -139,9 +153,9 @@ export function buildScene3D(dem, far, cfg, look) {
     if (boat) boat.visible = man.mesh.visible = false;
     const s = S_(t), spd = Math.abs(S_(t + 0.05) - S_(t - 0.05)) / 0.1, h = route.at(s / route.length);
     const keep = look.route?.keep; route.set(clamp(s / route.length), { head: 90, dash: 14, from: keep ? clamp((s - keep) / route.length) : 0 });
-    camera.fov = FOV(t); aim(camAt(t), V3(h.x, h.y + 2, h.z), UU(t), VV(t));
-    const d0 = pathDir(S_(t - 0.3)), d1 = pathDir(S_(t + 0.3)), turn = Math.atan2(d0[0] * d1[1] - d0[1] * d1[0], d0[0] * d1[0] + d0[1] * d1[1]);
-    camera.rotateZ(clamp(-turn * 0.3, -0.06, 0.06) * (1 - HOLD(t)));
+    camera.fov = FOV(t); aim(camAt(t), aimAt(t), UU(t), VV(t));
+    let turn = 0; for (let k = -2; k <= 2; k++) { const tt = t + k * 0.15, d0 = headDir(tt - 0.4), d1 = headDir(tt + 0.4); turn += Math.atan2(d0[0] * d1[1] - d0[1] * d1[0], d0[0] * d1[0] + d0[1] * d1[1]) / 5; }
+    camera.rotateZ(clamp(-turn * 0.25, -0.05, 0.05) * (1 - HOLD(t)));
     // 场景自己接管镜头（片尾远望骊山）：和跟拍之间平滑过渡
     const ovr = st.camOverride ? st.camOverride(t) : null;
     if (ovr) { const qa = camera.quaternion.clone(), pa = camera.position.clone(); camera.position.copy(ovr.pos); camera.lookAt(ovr.target); const qb = camera.quaternion.clone(); const b = ovr.blend ?? 1; camera.position.copy(pa.lerp(ovr.pos, b)); camera.quaternion.slerpQuaternions(qa, qb, b); }
@@ -162,9 +176,11 @@ export function buildScene3D(dem, far, cfg, look) {
     if (!showRoute || look.route?.head === false) return;
     const hp = V3(h.x, h.y, h.z), q = Overlay.screen(hp, camera);
     if (q) {
-      let stem = 30; if (rider && rider.mesh.visible) { const q2 = Overlay.screen(V3(h.x, h.y + 8.5, h.z), camera); if (q2) stem = Math.max(30, q[1] - q2[1] + 14); }
-      if (boat && boat.visible) { const q2 = Overlay.screen(V3(h.x, h.y + 6, h.z), camera); if (q2) stem = Math.max(30, q[1] - q2[1] + 14); }
-      const dir = camera.position.clone().sub(hp).normalize(); ov.head(q[0], q[1], t, { flat: clamp(Math.abs(dir.y) * 1.2, 0.25, 1), dim: occluded(camera.position, hp), size: 66, stem });
+      // 线头上有骑手 / 船：针竖在人马头顶上方，不穿过去
+      let stem = 30, gap = 0; const over = (top, clear) => { const q2 = Overlay.screen(V3(h.x, h.y + top, h.z), camera), q3 = Overlay.screen(V3(h.x, h.y + clear, h.z), camera); if (q2) stem = Math.max(30, q[1] - q2[1] + 14); if (q3) gap = Math.max(0, q[1] - q3[1]); };
+      if (rider && rider.mesh.visible) over(8.5, 5.2);
+      if (boat && boat.visible) over(6, 3.6);
+      const dir = camera.position.clone().sub(hp).normalize(); ov.head(q[0], q[1], t, { flat: clamp(Math.abs(dir.y) * 1.2, 0.25, 1), dim: occluded(camera.position, hp), size: 66, stem, gap: gap > 24 ? gap : 0 });
     }
   };
   return st;

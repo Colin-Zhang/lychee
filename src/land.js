@@ -78,9 +78,19 @@ export function buildLand(dem, far, cfg) {
     road = resample(chaikin(raw, 4), 6); roadH = smoothArr(road.map(([x, z]) => F.at(x, z)), 8, 4); RD = new PolyDist(road, 40);
     roadY = (s) => { const k = clamp(s / 6, 0, roadH.length - 1.001), i = Math.floor(k), f = k - i; return roadH[i] * (1 - f) + roadH[i + 1] * f; };
     F.map((x, z, h) => { const q = RD.query(x, z, 32); if (!q) return h; return h + (roadY(q.s) - 0.4 - h) * (1 - smoothstep(4.5, 32, q.d)); });
+    // 地形网格一格几十米，削出来的路基比路宽，格子之间的三角面在山坡上还会盖住路——路面、红线、骑手按三角面的真实高度往上托（托完略平一下，再托一次）
+    const lift = (a) => a.map((y, i) => Math.max(y, meshY(F, road[i][0], road[i][1]) + 0.3));
+    roadH = lift(smoothArr(lift(roadH), 3, 2));
     for (let i = 1; i < roadH.length; i++) if (roadH[i] > roadH[top]) top = i;
     sTop = top * 6;
   }
   const rect = { x0: F.x0, x1: F.x0 + F.d * (nx - 1), z0: F.z0, z1: F.z0 + F.d * (nz - 1) };
   return { F, G, hy, RV, road, roadH, RD, roadY, sTop, top, roadLen: road ? (road.length - 1) * 6 : 0, boat2, boatY, BD, rect, areaAt, proj, V, waterY, slope, port, cfg };
+}
+
+/** 地形网格（terrainMesh：每格沿 (i+1, j)–(i, j+1) 的对角线切成两个三角）在 (x, z) 处的真实高度——比双线性插值准，贴地的东西用它 */
+export function meshY(F, x, z) {
+  const gx = clamp((x - F.x0) / F.d, 0, F.nx - 1.0001), gz = clamp((z - F.z0) / F.d, 0, F.nz - 1.0001), i = Math.floor(gx), j = Math.floor(gz), fx = gx - i, fz = gz - j, h = F.h, a = j * F.nx + i;
+  const ha = h[a], hb = h[a + 1], hc = h[a + F.nx], hd = h[a + F.nx + 1];
+  return fx + fz <= 1 ? ha + (hb - ha) * fx + (hc - ha) * fz : hd + (hc - hd) * (1 - fx) + (hb - hd) * (1 - fz);
 }

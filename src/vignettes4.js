@@ -3,7 +3,8 @@
 import * as THREE from "three";
 import { tex, Stage, basic, revealMaterial } from "./engine.js";
 import { SW, SH, RES, peeledScene } from "./scenes2d.js";
-import { mk, rng, clamp, lerp, silk, smooth, stroke, fillPath, brushText, seal, lycheeArt, lychee, riderArt, figureArt, INK, VERM } from "./art.js";
+import { mk, rng, clamp, lerp, silk, smooth, stroke, fillPath, brushText, seal, lycheeArt, lychee, figureArt, INK, VERM } from "./art.js";
+import { drawRider, drawStandHorse, drawFallenHorse } from "./horse.js";
 
 const seg = (t, a, b) => clamp((t - a) / (b - a));
 const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
@@ -287,23 +288,14 @@ function stationLand(g, w) {
   const xs = []; for (let cx = 1500; cx < w - 300; cx += 2200) { station(cx); xs.push(cx); }
   return xs;
 }
-function standHorse(g, x, y, s) {
-  // 站着的马（剪影，侧面朝右）+ 牵马的人
-  g.save(); g.translate(x, y); g.scale(s, s); g.fillStyle = SIL;
-  fillPath(g, smooth([[48, -62], [55, -80], [72, -118], [80, -112], [92, -104], [96, -110], [90, -118], [70, -140], [62, -150], [56, -134], [42, -108], [24, -100], [-10, -96], [-40, -98], [-56, -86], [-60, -66], [-50, -56], [-10, -52], [30, -54]], 4, true), SIL);
-  for (const lx of [-46, -36, 34, 44]) { stroke(g, [[lx, -60], [lx + 2, -30], [lx, 0]], 9, 6, SIL); g.fillRect(lx - 5, -3, 11, 4); }
-  stroke(g, smooth([[-56, -88], [-70, -76], [-78, -50]], 4), 9, 3, SIL);
-  g.fillStyle = "rgba(120,60,40,.9)"; g.fillRect(-14, -108, 34, 10);   // 鞍
-  g.restore();
-}
 export function buildStation() {
   const st = new Stage(30), W2 = SW * 3.2;
   st.layer(basic(T(canvasOf(stationSky))), -900, 1.2);
   let xs; const landC = canvasOf((g) => { xs = stationLand(g, W2); }, W2, SH, 0.5);
   const s0 = st.pxScale(0, 1.12), land = new THREE.Mesh(new THREE.PlaneGeometry(W2 * s0, SH * s0), basic(T(landC))); st.scene.add(land);
-  const waitT = TM(canvasOf((g) => { standHorse(g, 300, 470, 2.2); figureArt(g, 120, 470, 3.4, "stand", 0, { color: SIL }); }, 560, 520, 1));
+  const waitT = TM(canvasOf((g) => { drawStandHorse(g, 330, 470, 1.75, { color: SIL, far: "#3a3028" }); figureArt(g, 110, 470, 3.4, "stand", 0, { color: SIL }); }, 560, 520, 1));
   const wait = sprite(st, waitT, 560, 520, { z: 4, anchor: [0.5, 0.9] });
-  const sheet = sheetOf(12, 384, (g, ph, sz) => riderArt(g, sz * 0.5, sz * 0.92, sz / 240, ph, { cargo: "tube", color: SIL, far: "#3a3028", robe: "#2a2018" }));
+  const sheet = sheetOf(16, 384, (g, ph, sz) => drawRider(g, sz * 0.52, sz * 0.92, sz / 275, ph, { cargo: "tube", color: SIL, far: "#3a3028", robe: "#2a2018" }));
   const mkRider = () => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: sheet.t.clone(), transparent: true, depthWrite: false })); m.material.map.needsUpdate = true; m.geometry.translate(0, 0.42, 0); st.scene.add(m); return m; };
   const A = mkRider(), B = mkRider();
   const tubeT = TM(canvasOf((g) => { g.fillStyle = "#b3a865"; g.fillRect(10, 20, 100, 30); g.fillStyle = VERM; g.fillRect(48, 14, 22, 42); g.beginPath(); g.arc(112, 35, 12, 0, Math.PI * 2); g.fill(); }, 130, 70, 1));
@@ -317,7 +309,7 @@ export function buildStation() {
     land.position.copy(st.px(W2 / 2 - sx, SH / 2, 0));
     const gateX = worldX(station0), by = SH * 0.8;
     wait.at(gateX + 220, by + 4); wait.visible = t < 4.45;
-    const fr = (m, x, y, size, flip, tt) => { m.scale.set((flip ? -1 : 1) * size * s0, size * s0, 1); m.position.copy(st.px(x, y, 5)); m.material.map.offset.x = (Math.floor(tt * 15) % 12) / 12; };
+    const fr = (m, x, y, size, flip, tt) => { m.scale.set((flip ? -1 : 1) * size * s0, size * s0, 1); m.position.copy(st.px(x, y, 5)); m.material.map.offset.x = (Math.floor(tt * 35) % 16) / 16; };
     const ax = lerp(-400, gateX - 60, easeOut(seg(t, 2.9, 4.0))); A.visible = t > 2.9; fr(A, ax, by + 6, 430, false, t < 4.0 ? t : 4.0);
     const bx = t < 4.45 ? gateX + 220 : gateX + 220 + Math.pow(seg(t, 4.45, 7.2), 1.2) * 2600; B.visible = t >= 4.45; fr(B, bx - pan * 0, by + 6, 430, false, t);
     const tk = ease(seg(t, 4.0, 4.45)), tx = lerp(ax - 40, gateX + 180, tk), ty = lerp(by - 250, by - 250, tk) - Math.sin(tk * Math.PI) * 90;
@@ -342,14 +334,15 @@ function rideSky(g, k) {
 }
 function rideHills(g, w, col, y0, amp, seed) { g.fillStyle = col; g.beginPath(); g.moveTo(0, SH); for (let x = 0; x <= w; x += 24) g.lineTo(x, y0 - Math.abs(Math.sin(x * 0.0018 + seed)) * amp - Math.sin(x * 0.009 + seed * 2) * amp * 0.15); g.lineTo(w, SH); g.closePath(); g.fill(); }
 export function buildRide() {
-  const st = new Stage(30), W2 = SW * 2;
+  // 马跑在近处的土坡上：地面线压到蹄子底下（字幕在地面的暗处，不挡腿），中景的山比马亮一档，四条腿的袭步看得清
+  const st = new Stage(30), W2 = SW * 2, GY = SH * 0.785;
   const skyMat = new THREE.ShaderMaterial({ uniforms: { t0: { value: T(canvasOf((g) => rideSky(g, 0))) }, t1: { value: T(canvasOf((g) => rideSky(g, 1))) }, t2: { value: T(canvasOf((g) => rideSky(g, 2))) }, uK: { value: 0 } }, vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `uniform sampler2D t0, t1, t2; uniform float uK; varying vec2 vUv; void main(){ vec3 a = texture2D(t0, vUv).rgb, b = texture2D(t1, vUv).rgb, c = texture2D(t2, vUv).rgb; gl_FragColor = vec4(uK < 1.0 ? mix(a, b, uK) : mix(b, c, uK - 1.0), 1.0); }` });
   st.layer(skyMat, -900, 1.2);
   const mkLayer = (draw, z, wrapK) => { const c = canvasOf((g) => draw(g), W2, SH, 0.5), t = T(c), s = st.pxScale(z, 1.16), m = new THREE.Mesh(new THREE.PlaneGeometry(W2 * s, SH * s), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); m.position.z = z; st.scene.add(m); m.userData = { s, wrapK }; return m; };
-  const far = mkLayer((g) => rideHills(g, W2, "rgba(60,52,60,.55)", SH * 0.62, 160, 1), -500), mid = mkLayer((g) => rideHills(g, W2, "rgba(30,26,26,.85)", SH * 0.74, 90, 3), -200), near = mkLayer((g) => { rideHills(g, W2, SIL, SH * 0.84, 22, 5); const R = rng(4); g.fillStyle = SIL; for (let x = 0; x < W2; x += 60 + R() * 200) { const h = 40 + R() * 160; for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(x + (R() - 0.5) * 50, SH * 0.84 - h + (R() - 0.3) * 40, 14 + R() * 20, 0, Math.PI * 2); g.fill(); } g.fillRect(x - 3, SH * 0.84 - h, 6, h); } }, 0);
+  const far = mkLayer((g) => rideHills(g, W2, "rgba(60,52,60,.55)", SH * 0.62, 160, 1), -500), mid = mkLayer((g) => rideHills(g, W2, "rgba(62,52,54,.72)", SH * 0.765, 70, 3), -200), near = mkLayer((g) => { rideHills(g, W2, SIL, GY, 7, 5); const R = rng(4); g.fillStyle = SIL; for (let x = 0; x < W2; x += 60 + R() * 200) { const h = 40 + R() * 160; for (let k = 0; k < 5; k++) { g.beginPath(); g.arc(x + (R() - 0.5) * 50, GY - h + (R() - 0.3) * 40, 14 + R() * 20, 0, Math.PI * 2); g.fill(); } g.fillRect(x - 3, GY - h, 6, h); } }, 0);
   const night = st.layer(new THREE.MeshBasicMaterial({ color: 0x0a0e1c, transparent: true, opacity: 0, depthWrite: false }), 40, 1.2);
-  const sheet = sheetOf(12, 384, (g, ph, sz) => riderArt(g, sz * 0.5, sz * 0.92, sz / 240, ph, { cargo: "tube", color: SIL, far: "#3a3028", robe: "#2a2018" }));
+  const sheet = sheetOf(16, 384, (g, ph, sz) => drawRider(g, sz * 0.52, sz * 0.92, sz / 275, ph, { cargo: "tube", color: SIL, far: "#3a3028", robe: "#2a2018" }));
   const s0 = st.pxScale(30, 1.12), rider = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: sheet.t, transparent: true, depthWrite: false })); rider.geometry.translate(0, 0.42, 0); st.scene.add(rider);
   const torch = sprite(st, T(canvasOf((g) => { const gr = g.createRadialGradient(150, 150, 4, 150, 150, 150); gr.addColorStop(0, "rgba(255,230,170,1)"); gr.addColorStop(0.25, "rgba(255,150,70,.7)"); gr.addColorStop(1, "rgba(255,120,50,0)"); g.fillStyle = gr; g.fillRect(0, 0, 300, 300); }, 300, 300, 1)), 520, 520, { z: 32, opacity: 0 });
   torch.material.blending = THREE.AdditiveBlending;
@@ -357,8 +350,8 @@ export function buildRide() {
     const k = clamp(seg(t, 0.4, 1.4) + seg(t, 1.6, 2.5), 0, 2); skyMat.uniforms.uK.value = k;
     for (const [m, sp] of [[far, 120], [mid, 420], [near, 1100]]) { const x = ((t * sp) % (W2 / 2)) ; m.position.x = (W2 / 4 - x) * m.userData.s * 0.5 + 0; }
     night.material.opacity = 0.35 * seg(k, 1.2, 2);
-    const p = st.px(SW * 0.5, SH * 0.86, 30); rider.position.copy(p); rider.scale.set(520 * s0, 520 * s0, 1); sheet.t.offset.x = (Math.floor(t * 16) % 12) / 12;
-    torch.at(SW * 0.5 + 60, SH * 0.86 - 330); torch.material.opacity = seg(k, 1.5, 2) * (0.85 + 0.15 * Math.sin(t * 23));
+    const p = st.px(SW * 0.5, GY + 4, 30); rider.position.copy(p); rider.scale.set(580 * s0, 580 * s0, 1); sheet.t.offset.x = (Math.floor(t * 35) % 16) / 16;
+    torch.at(SW * 0.5 + 60, GY + 4 - 360); torch.material.opacity = seg(k, 1.5, 2) * (0.85 + 0.15 * Math.sin(t * 23));
     st.camera.position.set(0, 0, st.D); st.camera.lookAt(0, 0, 0);
     st.look = { blur: 0.002, focus: 0.7, band: 0.25 };
   };
@@ -381,26 +374,8 @@ function fallenArt(g) {
   g.bezierCurveTo(SW * 0.18, SH * 0.82, SW * 0.26, SH * 0.66, SW * 0.46, SH * 0.66);
   g.bezierCurveTo(SW * 0.65, SH * 0.65, SW * 0.76, SH * 0.8, SW, SH * 0.85);
   g.lineTo(SW, SH); g.lineTo(0, SH); g.closePath(); g.fill();
-  // 倒在路边的马：四肢分开弯折，保留可辨认的耳、吻、鬃、尾。
-  g.save(); g.translate(SW * 0.44, SH * 0.66); g.scale(2.6, 2.6);
-  const horseInk = "#19130f", rim = "#b6a082";
-  const legs = [
-    [[-68, -4], [-99, 19], [-79, 47], [-65, 48]],
-    [[-46, 4], [-69, 27], [-43, 59], [-28, 57]],
-    [[26, 7], [59, 29], [87, 48], [103, 44]],
-    [[46, 3], [82, 18], [114, 35], [130, 30]],
-  ];
-  for (let i = 0; i < legs.length; i++) {
-    stroke(g, legs[i], 14, 12, rim);
-    stroke(g, legs[i], 10, 8, horseInk);
-    stroke(g, legs[i].slice(-2), 14, 12, horseInk);
-  }
-  const body = smooth([[-92, -10], [-85, -39], [-55, -58], [-7, -61], [38, -54], [64, -42], [83, -48], [106, -33], [126, -14], [132, -19], [133, -34], [139, -21], [143, -37], [149, -18], [168, -11], [184, 2], [181, 15], [165, 18], [143, 8], [121, 5], [99, 8], [78, 17], [32, 20], [-26, 19], [-70, 9]], 5, true);
-  stroke(g, body, 4, 4, rim); fillPath(g, body, horseInk);
-  stroke(g, smooth([[-87, -24], [-112, -16], [-133, -1], [-153, 3]], 4), 11, 3, horseInk);
-  for (let i = 0; i < 5; i++) stroke(g, [[59 + i * 8, -42 + i * 2], [55 + i * 9, -57 + i * 4]], 5, 1.5, horseInk);
-  stroke(g, [[154, -5], [160, -3]], 2, 2, rim);
-  g.restore();
+  // 倒在路边的马（侧卧、头搁在地上、腿僵直地伸着；鞍还在，荔枝已经被下一匹马带走了）——和全片的跑马同一套画法
+  drawFallenHorse(g, SW * 0.44, SH * 0.66 + 20, 2.9, { color: "#19130f", far: "#3a3028", rim: "rgba(214,190,150,.6)" });
   silk(g, SW, SH, { tone: null, vign: 0.45, seed: 64, fibers: 0.5 });
 }
 export function buildFallen() {

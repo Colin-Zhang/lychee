@@ -118,56 +118,7 @@ export function lycheeArt(g, cx, cy, r, { ripe = 1, age = 0, seed = 3, leaf = tr
 }
 export function lychee(size, opt = {}) { const c = mk(size, size), g = c.getContext("2d"); lycheeArt(g, size / 2, size * 0.56, size * 0.3, opt); return c; }
 
-// ───────────────── 骑马的人（侧面，朝右）─────────────────
-/** 在 (x, y)（地面）画一骑，s=1 时约 200 像素宽；phase 0–1 是奔跑的一个周期 */
-export function riderArt(g, x, y, s, phase, { jars = 1, color = INK, far = "#5a4c3f", accent = VERM, robe = "#3a2a1e", cargo = "jar" } = {}) {
-  g.save(); g.translate(x, y); g.scale(s, s);
-  const q = (o) => Math.PI * 2 * (phase + o), bob = -3 * Math.sin(Math.PI * 4 * phase);
-  g.translate(0, bob);
-  const leg = (hx, hy, a1, a2, L1, L2, col, w = 1) => {
-    const kx = hx + Math.sin(a1) * L1, ky = hy + Math.cos(a1) * L1, fx = kx + Math.sin(a2) * L2, fy = ky + Math.cos(a2) * L2;
-    stroke(g, [[hx, hy], [kx, ky]], 13 * w, 8 * w, col); stroke(g, [[kx, ky], [fx, fy]], 8 * w, 5 * w, col);
-    g.fillStyle = col; g.beginPath(); g.ellipse(fx + 2, fy + 1, 5 * w, 3.2 * w, 0, 0, Math.PI * 2); g.fill();
-  };
-  const hind = (o, col) => { const a1 = 0.55 * Math.sin(q(o)) - 0.1, a2 = a1 - (0.55 + 0.5 * Math.max(0, Math.sin(q(o) + 1.2))); leg(-40, -60, a1, a2, 30, 32, col); };
-  const front = (o, col) => { const a1 = 0.6 * Math.sin(q(o)) + 0.05, a2 = a1 + 0.95 * Math.max(0, -Math.cos(q(o))); leg(36, -60, a1, a2, 28, 32, col); };
-  hind(0.08, far); front(0.5, far);
-  // 尾巴
-  const tw = Math.sin(q(0.2)) * 4;
-  stroke(g, smooth([[-52, -86], [-70, -90 + tw * 0.5], [-90, -84 + tw], [-108, -76 + tw * 1.4]], 6), 11, 2, color);
-  // 马身
-  const body = smooth([[48, -62], [52, -76], [70, -110], [73, -104], [87, -98], [95, -102], [93, -108], [67, -130], [61, -142], [57, -129], [40, -105], [26, -98], [0, -93], [-36, -96], [-52, -84], [-57, -67], [-48, -55], [-10, -50], [24, -51]], 4, true);
-  fillPath(g, body, color);
-  // 鬃毛
-  for (let i = 0; i < 6; i++) { const t = i / 5, bx = lerp(56, 30, t), by = lerp(-126, -100, t); stroke(g, [[bx, by], [bx - 10 - Math.sin(q(0.1) + i) * 3, by - 6 + i]], 4, 1, color); }
-  // 骑手：腿、袍、身、臂、头、幞头
-  const robeFlap = Math.sin(q(0.3)) * 3;
-  fillPath(g, smooth([[4, -102], [-20, -104 + robeFlap], [-34, -94 + robeFlap], [-14, -86], [8, -90]], 4, true), robe);
-  stroke(g, [[4, -100], [17, -84], [9, -68]], 9, 6, color);
-  stroke(g, [[2, -100], [18, -128]], 15, 12, color);
-  stroke(g, [[18, -126], [34, -114], [46, -106]], 6, 4, color);
-  g.strokeStyle = "rgba(33,26,19,.7)"; g.lineWidth = 1.2; g.beginPath(); g.moveTo(46, -106); g.quadraticCurveTo(68, -96, 88, -104); g.stroke();
-  g.fillStyle = color; g.beginPath(); g.arc(24, -138, 8, 0, Math.PI * 2); g.fill();
-  g.beginPath(); g.ellipse(23, -144, 9, 5, -0.2, Math.PI, Math.PI * 2.05); g.fill();
-  const hw = Math.sin(q(0.15)) * 3;
-  stroke(g, smooth([[16, -141], [4, -146 + hw], [-8, -142 + hw * 1.5]], 4), 2.6, 1.2, color);
-  stroke(g, smooth([[16, -138], [5, -138 + hw], [-5, -133 + hw * 1.4]], 4), 2.4, 1, color);
-  // 背上的瓮（红封口）
-  const jar = (jx, jy, k = 1) => { g.save(); g.translate(jx, jy); g.scale(k, k); fillPath(g, smooth([[-6, -12], [6, -12], [9, -4], [8, 8], [0, 13], [-8, 8], [-9, -4]], 4, true), "#6b4630"); g.fillStyle = accent; g.fillRect(-6, -15, 12, 4); g.strokeStyle = "rgba(20,14,10,.6)"; g.lineWidth = 1; g.beginPath(); g.moveTo(-8, 1); g.lineTo(8, 1); g.stroke(); g.restore(); };
-  if (cargo === "tube") {
-    // 背上一捆竹筒（红布扎口、朱红封泥），后面拖一条红绸
-    const fl = Math.sin(q(0.1)) * 4;
-    stroke(g, smooth([[-4, -134], [-22, -139 + fl], [-42, -134 + fl * 1.5], [-62, -140 + fl * 2.2]], 6), 5, 1.5, accent);
-    for (let k = 0; k < 3; k++) { const ox = -k * 5.5, oy = k * 2.2; stroke(g, [[-14 + ox, -96 + oy], [2 + ox, -134 + oy]], 6.5, 6.5, k === 1 ? "#b3a865" : "#9d9452"); g.fillStyle = "rgba(40,36,16,.75)"; for (let m = 1; m < 4; m++) { const f = m / 4; g.fillRect(-14 + ox + 16 * f - 3.5, -96 + oy - 38 * f, 7, 1.6); } g.fillStyle = accent; g.beginPath(); g.arc(2 + ox, -134 + oy, 3.6, 0, Math.PI * 2); g.fill(); }
-    g.save(); g.translate(-11, -116); g.rotate(-1.18); g.fillStyle = accent; g.fillRect(-4, -11, 8, 22); g.restore();
-  } else {
-    jar(-14, -116, 1);
-    if (jars > 1) jar(-26, -80, 1.15);
-  }
-  hind(0, color); front(0.42, color);
-  g.restore();
-}
-export function riderSprite(size, phase, opt) { const c = mk(size, size), g = c.getContext("2d"); riderArt(g, size * 0.5, size * 0.92, size / 240, phase, opt); return c; }
+// 骑马的人、马：见 horse.js（按真实袭步画的）
 
 // ───────────────── 船、挑夫、人物、骆驼 ─────────────────
 export function boatArt(g, x, y, s, phase = 0, { color = INK, accent = VERM } = {}) {

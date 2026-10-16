@@ -331,26 +331,28 @@ export function forest(U, atlasTex, list) {
 
 // ───────── 竖着的剪影卡片（人马、船夫）：一张横条帧图，卡片沿着前进方向摆
 export class Card {
-  constructor(U, sheetTex, frames, { w = 6, h = 6, foot = 0.08 } = {}) {
+  constructor(U, sheetTex, frames, { w = 6, h = 6, foot = 0.08, cols = frames } = {}) {
     const g = new THREE.PlaneGeometry(w, h); g.translate(0, h * (0.5 - foot), 0);
-    this.u = { ...U, map: { value: sheetTex }, uFrame: { value: new THREE.Vector2(0, 1 / frames) } };
+    this.cols = cols; this.rows = Math.ceil(frames / cols);
+    this.u = { ...U, map: { value: sheetTex }, uFrame: { value: new THREE.Vector4(0, 0, 1 / cols, 1 / this.rows) } };
     this.mesh = new THREE.Mesh(g, new THREE.ShaderMaterial({
       uniforms: this.u, side: THREE.DoubleSide,
       vertexShader: `varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-      fragmentShader: `${COMMON} uniform sampler2D map; uniform vec2 uFrame; varying vec2 vUv; varying vec3 vW;
-        void main(){ vec4 c = texture2D(map, vec2(uFrame.x + vUv.x * uFrame.y, vUv.y)); if (c.a < 0.45) discard; gl_FragColor = vec4(fogMix(c.rgb, vW), 1.0); }`,
+      fragmentShader: `${COMMON} uniform sampler2D map; uniform vec4 uFrame; varying vec2 vUv; varying vec3 vW;
+        void main(){ vec4 c = texture2D(map, vec2(uFrame.x + vUv.x * uFrame.z, uFrame.y + vUv.y * uFrame.w)); if (c.a < 0.45) discard; gl_FragColor = vec4(fogMix(c.rgb, vW), 1.0); }`,
     }));
     this.mesh.frustumCulled = false; this.frames = frames;
   }
   /** 放在 (x, y, z)，朝 (dx, dz) 方向，第 f 帧。给了 camera 就改成“只绕竖轴转向镜头”的剪影（永远看到侧面），按前进方向在屏幕上朝左还是朝右翻过来 */
   place(x, y, z, dx, dz, f, camera = null) {
-    this.mesh.position.set(x, y, z); this.u.uFrame.value.x = (Math.floor(f) % this.frames) / this.frames;
+    this.mesh.position.set(x, y, z); const k = Math.floor(f) % this.frames, c = k % this.cols, r = Math.floor(k / this.cols); this.u.uFrame.value.x = c / this.cols; this.u.uFrame.value.y = 1 - (r + 1) / this.rows;
     if (!camera) { this.mesh.rotation.set(0, -Math.atan2(dz, dx), 0); this.mesh.scale.x = 1; return; }
     const th = Math.atan2(camera.position.x - x, camera.position.z - z);
     this.mesh.rotation.set(0, th, 0); this.mesh.scale.x = dx * Math.cos(th) - dz * Math.sin(th) >= 0 ? 1 : -1;
   }
 }
-export function sheetTex(n, size, draw, { h = size } = {}) { const c = mk(size * n, h), g = c.getContext("2d"); for (let i = 0; i < n; i++) { g.save(); g.translate(i * size, 0); g.beginPath(); g.rect(0, 0, size, h); g.clip(); draw(g, i / n, size); g.restore(); } return tex(c); }
+/** 帧图：n 帧，每帧 size×size；cols 列（默认排成一行；帧多时排成方阵，免得贴图太宽超出显卡上限） */
+export function sheetTex(n, size, draw, { h = size, cols = n } = {}) { const rows = Math.ceil(n / cols), c = mk(size * cols, h * rows), g = c.getContext("2d"); for (let i = 0; i < n; i++) { g.save(); g.translate((i % cols) * size, Math.floor(i / cols) * h); g.beginPath(); g.rect(0, 0, size, h); g.clip(); draw(g, i / n, size); g.restore(); } return tex(c); }
 
 // ───────── 一团团的尘土 / 烟：朝向镜头的软圆片，每帧在 CPU 上摆
 export class Puffs {

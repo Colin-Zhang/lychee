@@ -97,6 +97,7 @@ function drawMini(t, prog, alpha) {
 }
 function drawHud(t, info, mini) {
   h.clearRect(0, 0, W, H);
+  h.fillStyle = "rgba(0,0,0,0.004)"; h.fillRect(t % 2 < 1 ? 0 : 1, 0, 1, 1);   // 画布永远不是全空、每帧都有一点变化：浏览器截图时不会沿用上一帧的旧内容
   if (info.liA) stampBox(1604, 56, 270, 108, `${cnNum(info.total ? LI_TOTAL : info.li)}里`, `${(info.total ? LI_TOTAL : info.li).toLocaleString("en")} li`, info.liA);
   if (info.dayA) stampBox(1434, 56, 150, 108, `第${CN[info.day] ?? info.day}日`, `Day ${info.day}`, info.dayA);
   if (info.noteA) { h.save(); h.globalAlpha = info.noteA; h.font = '400 26px "SerifSC"'; h.fillStyle = "rgba(239,226,194,.95)"; h.textAlign = "right"; h.shadowColor = "rgba(0,0,0,.6)"; h.shadowBlur = 8; h.fillText("推算：五千二百里，日行约五百里", 1874, 200); h.restore(); }
@@ -138,10 +139,13 @@ export function setFrame(t) {
   let info = runSet(A, t), mix = 0;
   if (B) { const ib = runSet(B, t); if (B[0] === "map") info = ib; mix = clamp((t - B[1]) / (A[2] - B[1])); }
   // 叠层：当前布景的标签层淡出、下一个淡入；别的都藏起来
-  for (const [name, st] of Object.entries(cache)) if (st.overlay) st.overlay.c.style.opacity = name === A[0] ? 1 - mix : B && name === B[0] ? mix : 0;
+  // 标签和线头：转场前半段只留旧画面的（淡出），后半段才出新画面的（淡入）——不会同时出现两个线头
+  const sm = (a, b, x) => { const k = clamp((x - a) / (b - a)); return k * k * (3 - 2 * k); };
+  for (const [name, st] of Object.entries(cache)) if (st.overlay) st.overlay.c.style.opacity = name === A[0] ? 1 - sm(0, 0.45, mix) : B && name === B[0] ? sm(0.55, 1, mix) : 0;
   const fade = Math.max(1 - seg(t, 0, 0.6), seg(t, DUR - 1.0, DUR));
   release(t);
-  renderFrame(getSet(A[0]), B ? getSet(B[0]) : null, mix, { time: t, fade });
+  const mode = B ? { ink: 0, mist: 1, fade: 2 }[B[4] ?? "ink"] : 0;
+  renderFrame(getSet(A[0]), B ? getSet(B[0]) : null, mix, { time: t, fade, mode });
   // 小地图：立体的路上那几段才有
   let mini = null; const m3 = [A, B].filter(Boolean).find((s) => MINI[s[0]]);
   if (m3) { const [stop, d0, d1] = MINI[m3[0]], lt = (t - m3[1]) / (m3[2] - m3[1]); mini = { prog: clamp(J.at(stop) + d0 + (d1 - d0) * lt), a: Math.min(seg(t, 42.4, 42.9), 1 - seg(t, 59.2, 59.6)) }; }

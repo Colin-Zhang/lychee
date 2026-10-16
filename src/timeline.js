@@ -17,7 +17,7 @@ export const CAPS = [
   [33.4, 37.4, "三十里一驿。人换，马换，荔枝不停。", "A station every thirty li. Riders change, horses change — the lychees never stop."],
   [37.8, 40.6, "白天跑，夜里也跑。", "By day, and through the night."],
   [41.0, 49.6, "翻大庾岭，走张九龄开的那条山路。", "Over the Dayu Pass, on the road Zhang Jiuling cut through the mountains."],
-  [50.0, 59.6, "下赣江，渡长江，上汉水，越秦岭。", "Down the Gan, across the Yangtze, up the Han, over the Qinling.", { parts: [50.0, 52.2, 54.6, 57.0] }],
+  [50.0, 59.6, "下赣江，渡长江，上汉水，越秦岭。", "Down the Gan, across the Yangtze, up the Han, over the Qinling.", { parts: [50.0, 52.3, 54.7, 57.1] }],
   [59.8, 64.2, "照这样跑，十天上下，荔枝进了长安。", "At that pace, in about ten days, the lychees reached Chang'an."],
   [64.6, 68.0, "一路上跑死了多少马，没人算过。", "No one counted the horses that died on the way."],
   [68.2, 71.2, "而吃下它，只要一口。", "And it was gone in a single bite."],
@@ -28,12 +28,12 @@ export const CAPS = [
 ];
 export const POEM = [71.6, 85.6, "杜牧《过华清宫》", "Du Mu, Passing the Huaqing Palace"];
 
-// 布景：[名字, 开始, 结束, 参数]；本段时间 = t - 开始
+// 布景：[名字, 开始, 结束, 参数, 进场的转场]；本段时间 = t - 开始。转场：ink 墨晕开（默认）/ mist 穿云 / fade 叠化
 export const SEGS = [
-  ["decay", 0, 5.0], ["map", 4.5, 11.6, "open"], ["plate", 11.2, 14.8], ["book", 14.4, 21.4], ["orchard", 21.0, 27.4], ["tube", 27.0, 30.6],
-  ["station", 30.2, 37.8], ["ride", 37.4, 41.0], ["map", 40.6, 42.6, "dayu"], ["meiling", 42.2, 50.2],
-  ["ganjiang", 49.8, 52.4], ["jiujiang", 52.0, 54.8], ["xiangyang", 54.4, 57.2], ["languan", 56.8, 59.8],
-  ["map", 59.4, 64.6, "arrive"], ["fallen", 64.2, 68.2], ["peel", 67.8, 71.4], ["lishan", 71.0, DUR],
+  ["decay", 0, 5.2], ["map", 4.5, 11.7, "open"], ["plate", 11.1, 14.9], ["book", 14.3, 21.5], ["orchard", 20.9, 27.5], ["tube", 26.9, 30.7, null, "fade"],
+  ["station", 30.1, 37.9], ["ride", 37.3, 41.1, null, "fade"], ["map", 40.5, 42.7, "dayu"], ["meiling", 41.9, 50.4, null, "mist"],
+  ["ganjiang", 49.5, 52.7, null, "mist"], ["jiujiang", 51.8, 55.1, null, "mist"], ["xiangyang", 54.2, 57.5, null, "mist"], ["languan", 56.6, 60.1, null, "mist"],
+  ["map", 59.2, 64.6, "arrive", "mist"], ["fallen", 64.0, 68.3], ["peel", 67.6, 71.5, null, "fade"], ["lishan", 70.7, DUR, null, "fade"],
 ];
 // 立体场景放映时，左上角的小地图上线头在哪（按路线长度的比例，由站名推出来）
 export const MINI = { meiling: ["大庾岭", -0.004, 0.004], ganjiang: ["虔州", 0.0, 0.01], jiujiang: ["江州", 0.0, 0.006], xiangyang: ["襄州", -0.012, -0.004], languan: ["商州", 0.012, 0.025] };

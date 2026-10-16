@@ -26,7 +26,7 @@ export class Overlay {
     Object.assign(this.c.style, { position: "absolute", left: "0", top: "0", width: `${W}px`, height: `${H}px`, pointerEvents: "none" });
     parent.appendChild(this.c); this.g = this.c.getContext("2d"); this.icon = headIcon();
   }
-  clear() { this.g.clearRect(0, 0, W, H); }
+  clear() { this.g.clearRect(0, 0, W, H); this.flip = !this.flip; this.g.fillStyle = "rgba(0,0,0,0.004)"; this.g.fillRect(this.flip ? 0 : 1, 0, 1, 1); }   // 永远留一个看不见的点（浏览器截图不沿用旧帧）
   /** 三维点 → 屏幕像素；在镜头后面返回 null */
   static screen(v, camera) {
     const p = v.clone().applyMatrix4(camera.matrixWorldInverse); if (p.z > -1) return null;
@@ -65,7 +65,8 @@ export class Overlay {
     g.restore();
   }
   /** 线头：地上的红晕（按视角压扁成椭圆）+ 插针 + 一颗荔枝。flat：0 侧看 → 1 正上方看；dim：被山挡住时变淡 */
-  head(x, y, t, { a = 1, flat = 0.5, dim = false, size = 56, stem = 30, rot = 0 } = {}) {
+  /** gap：针从离地多高（像素）开始画——骑手 / 船在线头上时，针让开人马，只在头顶上方 */
+  head(x, y, t, { a = 1, flat = 0.5, dim = false, size = 56, stem = 30, rot = 0, gap = 0 } = {}) {
     if (a <= 0.01) return;
     const g = this.g; g.save(); g.globalAlpha = a * (dim ? 0.5 : 1);
     for (let k = 0; k < 2; k++) {
@@ -73,8 +74,9 @@ export class Overlay {
       g.strokeStyle = `rgba(214,58,38,${((1 - ph) * 0.85).toFixed(3)})`; g.lineWidth = 3.4 - ph * 2; g.beginPath(); g.ellipse(x, y, r, Math.max(2, r * flat), 0, 0, Math.PI * 2); g.stroke();
     }
     g.fillStyle = "rgba(210,58,38,.9)"; g.beginPath(); g.ellipse(x, y, 4.5, Math.max(1.8, 4.5 * flat), 0, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = PAPERC; g.lineWidth = 4.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - stem); g.stroke();
-    g.strokeStyle = "rgba(43,26,18,.92)"; g.lineWidth = 2; if (dim) g.setLineDash([4, 4]); g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - stem); g.stroke(); g.setLineDash([]);
+    const y0 = y - Math.min(gap, stem - 8);
+    g.strokeStyle = PAPERC; g.lineWidth = 4.5; g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y - stem); g.stroke();
+    g.strokeStyle = "rgba(43,26,18,.92)"; g.lineWidth = 2; if (dim) g.setLineDash([4, 4]); g.beginPath(); g.moveTo(x, y0); g.lineTo(x, y - stem); g.stroke(); g.setLineDash([]);
     const s = size * (1 + 0.05 * Math.sin(t * 6) * (1 - rot));
     if (rot > 0) { if (!this.rotIcon) this.rotIcon = headIcon(3); g.drawImage(this.icon, x - s * 0.5, y - stem - s * 0.82, s, s); g.globalAlpha = a * rot; g.drawImage(this.rotIcon, x - s * 0.5, y - stem - s * 0.82, s, s); }
     else g.drawImage(this.icon, x - s * 0.5, y - stem - s * 0.82, s, s);

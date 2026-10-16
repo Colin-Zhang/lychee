@@ -12,39 +12,40 @@ export const LOOKS = {
   meiling: {
     light: { ...DAY, base: 170, span: 650, fogY0: 170, fogA: 0.00075, fogB: 1 / 190, fogFar: 26000 },
     keys: (R) => [[0.0, R.sTop - 3000, 1000, 560, 18, 0, -0.3, 46, 0], [2.2, R.sTop - 650, 470, 230, 34, -0.05, -0.32, 43, 0], [3.3, R.sTop - 110, 200, 70, 52, -0.06, -0.2, 40, 0],
-      [4.0, R.sTop - 45, 118, 34, 62, -0.1, -0.14, 38, 0], [4.6, R.sTop - 12, 108, 30, 70, -0.08, -0.1, 38, 0], [5.8, R.sTop + 200, 650, 300, 22, 0, -0.5, 44, 0.1],
-      [6.8, R.sTop + 1400, 520, 620, 6, 0, -0.4, 46, 0.85], [8.0, R.sWater0 + 400, 520, 620, 6, 0, -0.18, 46, 1]],
+      [4.0, R.sTop - 45, 80, 22, 62, -0.1, -0.12, 36, 0], [4.6, R.sTop - 12, 72, 20, 70, -0.08, -0.08, 36, 0], [5.8, R.sTop + 200, 650, 300, 22, 0, -0.5, 44, 0.1],
+      [6.8, R.sTop + 1400, 520, 620, 6, 0, -0.4, 46, 0.85], [8.6, R.sWater0 + 900, 520, 620, 6, 0, -0.16, 46, 1]],
     labels: (R) => [{ name: "大庾岭", at: { s: R.sTop }, up: 30, t0: 0.3, t1: 5.3, lead: 120 }, { name: "大庾县", at: [114.36, 25.4], t0: 6.0, t1: 8.0, lead: 130 }],
+    clearance: 12,   // 山口两边的山比路高，离地下限放低一点，近景才贴得上骑手
   },
   // 第 14 屏：下赣江（船从虔州城下顺流而下，镜头在船前方回看城）
   ganjiang: {
     light: { ...DAY, base: 100, span: 520, fogY0: 100, fogA: 0.0009, fogB: 1 / 200, fogFar: 26000 },
-    keys: () => [[0.0, 3300, 560, 220, 152, 0.05, -0.24, 44, 0], [2.6, 3370, 360, 140, 160, 0.04, -0.22, 42, 0]],
+    keys: () => [[0.0, 3290, 580, 225, 150, 0.05, -0.24, 44, 0], [3.2, 3380, 340, 135, 161, 0.04, -0.22, 42, 0]],
     labels: () => [{ name: "虔州", at: [114.93, 25.85], t0: 0.0, t1: 2.6, lead: 100 }],
   },
   // 第 14 屏：渡长江（镜头在江北，隔着长江看江州城和后面的庐山）
   jiujiang: {
     light: { ...DAY, base: 25, span: 900, fogY0: 12, fogA: 0.00035, fogB: 1 / 240, fogFar: 48000 },
-    keys: (R) => { const s0 = R.sNear([115.99, 29.73]) - 700; return [[0.0, s0, 950, 430, 92, -0.42, -0.38, 46, 0], [2.6, s0 + 70, 860, 400, 98, -0.4, -0.37, 46, 0]]; },
+    keys: (R) => { const s0 = R.sNear([115.99, 29.73]) - 700; return [[0.0, s0, 960, 432, 91, -0.42, -0.38, 46, 0], [3.3, s0 + 90, 840, 395, 99, -0.4, -0.37, 46, 0]]; },
     labels: () => [{ name: "江州", at: [115.99, 29.712], t0: 0.0, t1: 2.6, lead: 70, side: -1 }, { name: "庐山", at: [115.98, 29.56], up: 30, t0: 0.4, t1: 2.6, lead: 90, side: 1 }],
   },
   // 第 14 屏：上汉水（逆流往北，远处是襄州城）
   xiangyang: {
     light: { ...DAY, base: 70, span: 320, fogY0: 62, fogA: 0.0008, fogB: 1 / 200, fogFar: 30000 },
-    keys: (R) => [[0.0, R.len - 2700, 620, 230, 34, 0, -0.3, 44, 0], [2.6, R.len - 2630, 440, 170, 42, 0, -0.27, 42, 0]],
+    keys: (R) => [[0.0, R.len - 2710, 630, 232, 33, 0, -0.3, 44, 0], [3.3, R.len - 2620, 420, 165, 43, 0, -0.27, 42, 0]],
     labels: () => [{ name: "襄州", at: [112.14, 32.04], t0: 0.0, t1: 2.6, lead: 110 }],
   },
   // 第 14 屏：越秦岭（侧上方看骑手翻过岭脊，谷里起云）
   languan: {
     light: { ...DAY, base: 650, span: 1300, fogY0: 950, fogA: 0.0013, fogB: 1 / 260, fogFar: 32000 },
-    keys: (R) => [[0.0, R.sTop - 950, 720, 300, 58, 0, -0.26, 44, 0], [2.8, R.sTop - 520, 560, 240, 70, 0, -0.22, 42, 0]],
+    keys: (R) => [[0.0, R.sTop - 960, 730, 302, 57, 0, -0.26, 44, 0], [3.5, R.sTop - 440, 540, 232, 72, 0, -0.22, 42, 0]],
     labels: (R) => [{ name: "秦岭", modern: "今陕西商洛、蓝田之间", at: { s: R.sTop }, up: 40, t0: 0.2, t1: 2.8, lead: 110 }],
   },
   // 第 18–21 屏：片尾，骊山黄昏。镜头从长安方向远望骊山（绣成堆）→ 山上的灯一盏盏亮起（千门次第开）→ 一骑红尘奔向山脚 → 尘落，停住
   lishan: {
     light: { sun: [-0.86, 0.2, 0.22], base: 380, span: 800, fogY0: 380, fogA: 0.00035, fogB: 1 / 220, fogFar: 42000, fogCol: "#eedcc0", hazeCol: "#e6d2b6", skyTop: "#a9a3bb", sunGlow: "#5c3416", litCol: "#fbe6cc", shadeCol: "#8f90ac" },
-    route: { show: false }, trees: 60000, dustCol: "#c75a3a", riderFrom: 7,
-    keys: (R) => [[0.0, R.len - 900, 300, 22, -72, -0.25, -0.12, 38, 0], [7.0, R.len - 900, 300, 22, -72, -0.25, -0.12, 38, 0], [10.6, R.len - 800, 280, 20, -76, -0.22, -0.12, 38, 0], [12.2, R.len - 760, 300, 30, -74, -0.2, -0.14, 38, 0], [14.0, R.len - 740, 560, 150, -60, -0.1, -0.28, 42, 0.7]],
+    route: { show: false }, trees: 60000, dustCol: "#dcb58a", riderFrom: 7, clearance: 8,
+    keys: (R) => [[0.0, R.len - 900, 120, 12, -72, -0.22, -0.1, 36, 0], [7.0, R.len - 900, 120, 12, -72, -0.22, -0.1, 36, 0], [10.6, R.len - 800, 110, 11, -76, -0.2, -0.1, 36, 0], [12.2, R.len - 760, 170, 24, -74, -0.18, -0.12, 38, 0], [14.0, R.len - 740, 560, 150, -60, -0.1, -0.28, 42, 0.7]],
     labels: () => [{ name: "骊山", modern: "今陕西西安临潼", at: [109.215, 34.338], up: 40, t0: 0.6, t1: 6.8, lead: 120 }],
     extra: (ctx) => lishanExtras(ctx),
   },
@@ -68,15 +69,15 @@ function lishanExtras({ st, scene, camera, U, L, R, roadAt, ground, S_, K, V3 })
     vertexShader: `attribute float aT; uniform float uT; varying float vA; void main(){ float k = clamp((uT - aT) * 3.0, 0.0, 1.0); vA = k * (0.85 + 0.15 * sin(uT * 9.0 + aT * 30.0)); vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = (30.0 + 44.0 * k) * (2400.0 / -mv.z) * 0.32 + 7.0 * k; gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `uniform sampler2D map; varying float vA; void main(){ float a = texture2D(map, gl_PointCoord).a * vA; if (a < 0.01) discard; gl_FragColor = vec4(vec3(1.0, 0.78, 0.5) * a, a); }` });
   const lampPts = new THREE.Points(g, lampMat); lampPts.frustumCulled = false; lampPts.renderOrder = 25; scene.add(lampPts);
-  // 红尘：骑手身后一团团红色的尘土，飘起、散开、慢慢落定
-  const red = new K.Puffs(U, 110, { color: "#c9704c" }); scene.add(red.mesh);
+  // 红尘：马蹄扬起的黄尘（夕阳下泛暖色，不是红烟），骑手身后一团团飘起、散开、慢慢落定
+  const red = new K.Puffs(U, 110, { color: "#f2dcb8" }); scene.add(red.mesh);
   const C = (h) => new THREE.Color(h), from = { lit: C("#fbe6cc"), haze: C("#e6d2b6"), sky: C("#a9a3bb"), fog: C("#eedcc0") }, to = { lit: C("#f2c49c"), haze: C("#d6b6a0"), sky: C("#7f7a98"), fog: C("#dcbca2") };
   // 镜头：0–7 秒远望骊山慢慢推近；7 秒后交给跟拍（关键帧）
   const camA = P(109.125, 34.405, 620), camB = P(109.165, 34.388, 360), tgtA = P(109.216, 34.336, 480), tgtB = P(109.211, 34.347, 330);
   st.camOverride = (t) => {
-    if (t >= 7.6) return null;
-    const k = clamp(t / 7.6), e = k * k * (3 - 2 * k);
-    return { pos: camA.clone().lerp(camB, e), target: tgtA.clone().lerp(tgtB, e), blend: 1 - clamp((t - 6.8) / 0.8) };
+    if (t >= 7.8) return null;
+    const k = clamp(t / 7.8), e = k * k * (3 - 2 * k);
+    const bl = clamp((t - 6.5) / 1.3); return { pos: camA.clone().lerp(camB, e), target: tgtA.clone().lerp(tgtB, e), blend: 1 - bl * bl * (3 - 2 * bl) };
   };
   return (t) => {
     lampMat.uniforms.uT.value = t;
@@ -86,7 +87,8 @@ function lishanExtras({ st, scene, camera, U, L, R, roadAt, ground, S_, K, V3 })
     if (t > 7) for (let i = 0; i < 110; i++) {
       const tb = 7 + (Math.floor((t - 7) / 0.04) - i) * 0.04, age = t - tb; if (age < 0 || tb < 7) continue;
       const s = S_(Math.min(tb, 12)), q = roadAt(Math.min(s, R.sRoadEnd)), rr = Math.abs((Math.sin(i * 78.233 + Math.floor(tb * 50) * 12.9898) * 43758.5453) % 1) - 0.5, settle = clamp((t - 11.6) / 2.2), stop = tb > 12 ? 0 : 1;
-      list.push([q.x + rr * 14 * (1 + age), q.y + 1.5 + age * (4.5 - settle * 3.5), q.z - rr * 11 * (1 + age), 5 + age * 9, 0.3 * stop * Math.pow(Math.max(0, 1 - age / 4), 1.3) * (1 - settle * 0.6)]);
+      // 从蹄下扬起：一开始紧贴着马、颜色亮，越往后越大、越高、越淡
+      list.push([q.x + rr * 8 * (1 + age), q.y + 0.8 + age * (3 - settle * 2), q.z - rr * 6 * (1 + age), 2.5 + age * 7, 0.42 * stop * Math.pow(Math.max(0, 1 - age / 4), 1.5) * (1 - settle * 0.6)]);
     }
     red.set(list);
   };

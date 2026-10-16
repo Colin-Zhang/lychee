@@ -32,10 +32,11 @@ const comp = new THREE.ShaderMaterial({
     tA: { value: rtA.texture }, tB: { value: rtB.texture }, tMask: { value: noiseTex },
     uMix: { value: 0 }, uBlurA: { value: 0 }, uBlurB: { value: 0 }, uFocusA: { value: 0.5 }, uFocusB: { value: 0.5 }, uBandA: { value: 0.18 }, uBandB: { value: 0.18 },
     uTime: { value: 0 }, uFade: { value: 0 }, uFadeCol: { value: new THREE.Color(0, 0, 0) }, uVig: { value: 0.28 }, uGrain: { value: 0.028 }, uWarm: { value: 0.04 },
+    uMode: { value: 0 }, uMistCol: { value: new THREE.Color(0.93, 0.9, 0.82) },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
   fragmentShader: `
-    uniform sampler2D tA, tB, tMask; uniform float uMix, uBlurA, uBlurB, uFocusA, uFocusB, uBandA, uBandB, uTime, uFade, uVig, uGrain, uWarm; uniform vec3 uFadeCol; varying vec2 vUv;
+    uniform sampler2D tA, tB, tMask; uniform float uMix, uBlurA, uBlurB, uFocusA, uFocusB, uBandA, uBandB, uTime, uFade, uVig, uGrain, uWarm, uMode; uniform vec3 uFadeCol, uMistCol; varying vec2 vUv;
     const vec2 P[12] = vec2[12](${POISSON.map(([x, y]) => `vec2(${x.toFixed(2)}, ${y.toFixed(2)})`).join(", ")});
     vec3 tilt(sampler2D t, vec2 uv, float focus, float band, float amt) {
       float d = abs(uv.y - focus); float r = amt * smoothstep(band, band + 0.35, d);
@@ -44,13 +45,27 @@ const comp = new THREE.ShaderMaterial({
     }
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main() {
-      vec3 col = tilt(tA, vUv, uFocusA, uBandA, uBlurA);
-      if (uMix > 0.0) {
-        vec3 b = tilt(tB, vUv, uFocusB, uBandB, uBlurB);
-        float n = texture2D(tMask, vUv).r; float soft = 0.07;
+      vec3 col;
+      if (uMix <= 0.0) col = tilt(tA, vUv, uFocusA, uBandA, uBlurA);
+      else if (uMode < 0.5) {
+        // 墨晕开：按噪声一块块洇过去，边上一圈淡墨
+        vec3 a = tilt(tA, vUv, uFocusA, uBandA, uBlurA), b = tilt(tB, vUv, uFocusB, uBandB, uBlurB);
+        float n = texture2D(tMask, vUv).r; float soft = 0.12;
         float m = smoothstep(n - soft, n + soft, uMix * (1.0 + 2.0 * soft) - soft);
         float edge = 1.0 - abs(2.0 * m - 1.0);
-        col = mix(col, b, m) * (1.0 - edge * 0.38);
+        col = mix(a, b, m) * (1.0 - edge * 0.24);
+      } else {
+        // 穿云（mode 1）/ 叠化（mode 2）：前一个画面往前推、后一个从微微放大里落定；穿云时中间漫过一层飘动的云雾
+        float k = smoothstep(0.0, 1.0, uMix);
+        vec2 ua = (vUv - 0.5) / (1.0 + 0.06 * k) + 0.5, ub = (vUv - 0.5) / (1.0 + 0.06 * (1.0 - k)) + 0.5;
+        vec3 a = tilt(tA, ua, uFocusA, uBandA, uBlurA), b = tilt(tB, ub, uFocusB, uBandB, uBlurB);
+        col = mix(a, b, k);
+        if (uMode < 1.5) {
+          float n1 = texture2D(tMask, vUv * 0.62 + vec2(uMix * 0.22, uMix * 0.05)).r, n2 = texture2D(tMask, vUv * 1.4 + vec2(-uMix * 0.35, 0.1 + uMix * 0.08)).r;
+          // 云是一团一团的，不是一整片白：最浓时也只盖住七成，能透出前后两个画面
+          float amt = pow(sin(uMix * 3.14159), 1.6), cloud = smoothstep(0.32, 0.78, n1 * 0.6 + n2 * 0.4 + amt * 0.22);
+          col = mix(col, uMistCol, clamp(amt * (0.18 + 0.62 * cloud), 0.0, 0.72));
+        }
       }
       col += vec3(uWarm, uWarm * 0.45, -uWarm * 0.4);
       float v = smoothstep(1.05, 0.32, length((vUv - 0.5) * vec2(1.0, 0.82)) * 1.25); col *= mix(1.0 - uVig, 1.0, v);
@@ -72,13 +87,13 @@ function draw(s, target) {
 /**
  * 画一帧。a / b 是布景：{ scene, camera, look: { blur, focus, band } }；mix 0–1 是从 a 转到 b 的进度（墨晕开）
  */
-export function renderFrame(a, b, mix, { time = 0, fade = 0, fadeCol = 0x000000, vig = 0.28, grain = 0.028 } = {}) {
+export function renderFrame(a, b, mix, { time = 0, fade = 0, fadeCol = 0x000000, vig = 0.28, grain = 0.028, mode = 0 } = {}) {
   draw(a, rtA);
   const u = comp.uniforms;
   u.uBlurA.value = a.look?.blur ?? 0; u.uFocusA.value = a.look?.focus ?? 0.5; u.uBandA.value = a.look?.band ?? 0.18;
   if (b && mix > 0) { draw(b, rtB); u.uBlurB.value = b.look?.blur ?? 0; u.uFocusB.value = b.look?.focus ?? 0.5; u.uBandB.value = b.look?.band ?? 0.18; u.uMix.value = mix; }
   else u.uMix.value = 0;
-  u.uTime.value = time; u.uFade.value = fade; u.uFadeCol.value.set(fadeCol); u.uVig.value = vig; u.uGrain.value = grain;
+  u.uTime.value = time; u.uFade.value = fade; u.uFadeCol.value.set(fadeCol); u.uVig.value = vig; u.uGrain.value = grain; u.uMode.value = mode;
   renderer.setRenderTarget(null); renderer.render(compScene, compCam);
 }
 

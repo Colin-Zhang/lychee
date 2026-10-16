@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><title>马 · 袭步</title><style>html,body{margin:0;background:#efe2c4}#stage{position:relative;width:1920px;height:1080px}</style></head>
+<body><div id="stage"><canvas id="c" width="1920" height="1080"></canvas></div>
+<script type="module">
+// 马的袭步：16 帧排成两行 + 一匹站着的马；?big=1 只画大的一帧（看细节）；?fallen=1 倒在地上的马
+import { drawRider, drawStandHorse, drawFallenHorse } from "./src/horse.js";
+const Q = new URLSearchParams(location.search), g = document.getElementById("c").getContext("2d"), big = Q.get("big"), fallen = Q.get("fallen");
+window.setFrame = (t) => {
+  g.fillStyle = "#efe2c4"; g.fillRect(0, 0, 1920, 1080);
+  if (fallen !== null) { g.fillStyle = "#b3a087"; g.fillRect(0, 700, 1920, 380); drawFallenHorse(g, 900, 760, 4.2, {}); return true; }
+  if (big !== null) { g.fillStyle = "#cbb894"; g.fillRect(0, 900, 1920, 4); drawRider(g, 900, 900, 3.2, (t * 2.2) % 1, {}); return true; }
+  for (let i = 0; i < 16; i++) { const x = 130 + (i % 8) * 232, y = 330 + Math.floor(i / 8) * 330; g.fillStyle = "#cbb894"; g.fillRect(x - 110, y, 220, 3); drawRider(g, x, y, 0.95, i / 16, {}); g.fillStyle = "#6a5a44"; g.font = "16px sans-serif"; g.fillText(String(i), x - 100, y + 24); }
+  g.fillStyle = "#cbb894"; g.fillRect(760, 1000, 400, 3); drawStandHorse(g, 960, 1000, 1.0, {});
+  return true;
+};
+window.ready = true;
+</script></body></html>
