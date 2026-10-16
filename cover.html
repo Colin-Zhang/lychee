@@ -9,7 +9,7 @@
 <body><canvas id="c"></canvas>
 <script>window.addEventListener("error", (e) => { window.failed = e.message || String(e); }); window.addEventListener("unhandledrejection", (e) => { window.failed = String(e.reason && e.reason.stack || e.reason); });</script>
 <script type="module">
-// 封面：古地图做底，朱红路线从岭南走到长安；开场那颗荔枝放在路线起点；路上一骑扬尘奔向长安；毛笔字标题。
+// 封面：古地图做底，朱红路线从岭南走到长安；路线南端挂着一小串荔枝（路像它的枝）；路上一骑扬尘奔向长安；毛笔字标题。
 // ?r=3x4 / 9x16 / 4x3 / 16x9 / 16x6（node tools/cover.mjs 一次出全部，存到 out/cover-*.png）
 import { drawMap, P, S, MW, MH } from "./src/map.js";
 import { journey, STOPS } from "./src/journey.js";
@@ -24,13 +24,13 @@ const INK = "#2a1c12", VERM = "#c8321f", PAPER = "rgba(244,232,204,";
 const TITLE = [["三天就坏", VERM], ["的荔枝", INK]], TITLE2 = "怎么送到长安？", POEM = "一骑红尘妃子笑　无人知是荔枝来";
 
 // 各比例的排版：t 标题（x, y 第一行基线, 字号, 对齐, 行距）；p 诗；box 路线要装进的框；ly 荔枝（离广州的偏移、半径）；fade 标题底下压淡地图的区域
-// box：路线要装进的框（广州在框的最下面，荔枝挂在那儿往下垂）；lr：荔枝半径
+// box：路线要装进的框（广州在框的最下面，一串荔枝挂在那儿往下垂）；fr：每颗荔枝的半径
 const LAYOUT = {
-  "3x4": { t: [540, 192, 124, "center", 150], p: [540, 424, 34], box: [150, 548, 760, 690], lr: 64, fade: "top", stamp: "west", ling: "left" },
-  "9x16": { t: [540, 300, 128, "center", 160], p: [540, 552, 36], box: [140, 690, 780, 920], lr: 76, fade: "top", stamp: "west", ling: "left" },
-  "4x3": { t: [92, 420, 96, "left", 126], p: [96, 610, 30], box: [860, 110, 500, 720], lr: 60, fade: "left", stamp: "east", ling: "left" },
-  "16x9": { t: [130, 420, 128, "left", 162], p: [134, 662, 36], box: [1150, 100, 600, 760], lr: 62, fade: "left", stamp: "east", ling: "left" },
-  "16x6": { t: [110, 296, 96, "left", 124], p: [114, 488, 28], box: [1230, 60, 470, 480], lr: 46, fade: "left", stamp: "east", ling: "left" },
+  "3x4": { t: [540, 192, 124, "center", 150], p: [540, 424, 34], box: [150, 548, 760, 690], fr: 19, fade: "top", stamp: "west", ling: "left" },
+  "9x16": { t: [540, 300, 128, "center", 160], p: [540, 552, 36], box: [140, 690, 780, 920], fr: 23, fade: "top", stamp: "west", ling: "left" },
+  "4x3": { t: [92, 420, 96, "left", 126], p: [96, 610, 30], box: [860, 110, 500, 720], fr: 18, fade: "left", stamp: "east", ling: "left" },
+  "16x9": { t: [130, 420, 128, "left", 162], p: [134, 662, 36], box: [1150, 100, 600, 760], fr: 19, fade: "left", stamp: "east", ling: "left" },
+  "16x6": { t: [110, 296, 96, "left", 124], p: [114, 488, 28], box: [1230, 60, 470, 480], fr: 14, fade: "left", stamp: "east", ling: "left" },
 };
 const L = LAYOUT[R];
 
@@ -72,13 +72,20 @@ window.setFrame = () => {
   const rp = along(0.83), rs = 0.56 * u;
   for (let i = 0; i < 26; i++) { const a = i / 25, x = rp[0] + (40 + a * 260) * u, y = rp[1] - (6 + a * 50 + Math.sin(i * 1.7) * 12) * u, r = (18 + a * 60) * u; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(236,206,150,${0.42 * (1 - a) + 0.06})`); gr.addColorStop(1, "rgba(236,206,150,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
   g.save(); g.translate(rp[0], rp[1] + 6 * u); g.scale(-1, 1); drawRider(g, 0, 0, rs, 0.82, { cargo: "tube", rim: "rgba(255,226,180,.7)" }); g.restore();
-  // ── 主角：开场那颗荔枝，压在路线起点（岭南）上；底下一团暖光和影子把它从地图上托出来
-  const lr = L.lr, D = lr / 0.3, ix = gz[0] - 0.515 * D, iy = gz[1] - 0.254 * D, lx = ix + 0.5 * D, lyy = iy + 0.56 * D;   // 贴图里叶柄的根在 (0.515, 0.254)，对到广州
-  // 一颗挂在路线南端的荔枝，和地图上的东西一样大小的分量：只垫一圈很淡的暖光，影子落在左上来光的右下方（不像放在桌上）
-  { const gr = g.createRadialGradient(lx, lyy, lr * 0.6, lx, lyy, lr * 1.6); gr.addColorStop(0, "rgba(255,240,205,.38)"); gr.addColorStop(1, "rgba(255,240,205,0)"); g.fillStyle = gr; g.fillRect(lx - lr * 2, lyy - lr * 2, lr * 4, lr * 4); }
-  { const sx = lx + lr * 0.22, sy = lyy + lr * 0.26, gr = g.createRadialGradient(sx, sy, lr * 0.6, sx, sy, lr * 1.15); gr.addColorStop(0, "rgba(70,40,20,.22)"); gr.addColorStop(1, "rgba(70,40,20,0)"); g.fillStyle = gr; g.beginPath(); g.arc(sx, sy, lr * 1.15, 0, Math.PI * 2); g.fill(); }
-  g.drawImage(openingLychee(1536, { age: 0 }), ix, iy, D, D);
-  if (L.ling === "left") lab("岭南", gz[0] - lr * 1.75, gz[1] + lr * 0.55, 50 * u, "right"); else lab("岭南", gz[0] + lr * 1.75, gz[1] + lr * 0.55, 50 * u, "left");
+  // ── 一小串荔枝挂在路线南端（岭南）：一截果枝、两片叶、四颗果，和地图上的东西差不多的分量
+  const fr = L.fr, F = ([a, b]) => [gz[0] + a * fr, gz[1] + b * fr], skin = openingLychee(768, { age: 0 });
+  const node = F([0.15, 1.15]), fruits = [[-1.05, 2.35], [0.95, 2.55], [-0.1, 3.75], [1.75, 3.95]].map(F);
+  const twig = (pts, w0, w1) => { g.save(); g.lineCap = "round"; g.strokeStyle = "#5b3d22"; for (let i = 0; i < pts.length - 1; i++) { g.lineWidth = w0 + (w1 - w0) * (i / Math.max(1, pts.length - 2)); g.beginPath(); g.moveTo(...pts[i]); g.lineTo(...pts[i + 1]); g.stroke(); } g.restore(); };
+  const leaf = (x, y, ang, len, wd) => { g.save(); g.translate(x, y); g.rotate(ang); const gr = g.createLinearGradient(0, -wd, 0, wd); gr.addColorStop(0, "#6f9447"); gr.addColorStop(1, "#38592b"); g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(len * 0.45, -wd, len, 0); g.quadraticCurveTo(len * 0.45, wd, 0, 0); g.fill(); g.strokeStyle = "rgba(225,232,170,.6)"; g.lineWidth = Math.max(1, wd * 0.12); g.beginPath(); g.moveTo(0, 0); g.lineTo(len * 0.92, 0); g.stroke(); g.restore(); };
+  leaf(...node, -2.55, fr * 2.9, fr * 0.62); leaf(...node, -0.35, fr * 2.6, fr * 0.56);
+  twig([gz, F([0.05, 0.6]), node], fr * 0.3, fr * 0.22);
+  for (const p of fruits) twig([node, [(node[0] + p[0]) / 2, node[1] + (p[1] - node[1]) * 0.35], [p[0], p[1] - fr * 0.92]], fr * 0.14, fr * 0.1);
+  for (const [x, y] of fruits) {
+    const sg = g.createRadialGradient(x + fr * 0.3, y + fr * 0.35, fr * 0.4, x + fr * 0.3, y + fr * 0.35, fr * 1.2); sg.addColorStop(0, "rgba(70,40,20,.2)"); sg.addColorStop(1, "rgba(70,40,20,0)"); g.fillStyle = sg; g.beginPath(); g.arc(x + fr * 0.3, y + fr * 0.35, fr * 1.2, 0, Math.PI * 2); g.fill();
+    // 开场荔枝的果皮贴图，只取果身（叶子裁掉）
+    const D = fr / 0.3; g.save(); g.beginPath(); g.arc(x, y, fr * 1.04, 0, Math.PI * 2); g.clip(); g.drawImage(skin, x - D / 2, y - D * 0.56, D, D); g.restore();
+  }
+  if (L.ling === "left") lab("岭南", gz[0] - fr * 2.6, gz[1] + fr * 2.6, 50 * u, "right"); else lab("岭南", gz[0] + fr * 3.4, gz[1] + fr * 2.6, 50 * u, "left");
   // ── 里程章：五千二百一十里（竖条朱印，贴在路线旁边）
   { const b0 = M([bx0, by0]), b1 = M([bx1, by1]), sz = 36 * u, n = 7, hgt = n * sz * 1.06 + sz * 0.7, wdt = sz * 1.5, x = L.stamp === "west" ? b0[0] + (b1[0] - b0[0]) * 0.06 : b1[0] + 26 * u, y = b0[1] + (b1[1] - b0[1]) * (L.stamp === "west" ? 0.27 : 0.12);
     g.save(); g.translate(x + wdt / 2, y + hgt / 2); g.rotate(-0.03); g.fillStyle = "rgba(190,44,30,.94)"; g.fillRect(-wdt / 2, -hgt / 2, wdt, hgt); g.fillStyle = "#f6e9cf"; g.font = `${sz}px "Brush"`; g.textAlign = "center"; g.textBaseline = "middle";
