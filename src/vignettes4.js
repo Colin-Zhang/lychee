@@ -432,10 +432,7 @@ export function buildFallen() {
 export function buildPeel4() {
   const st = new Stage(30);
   let info; st.layer(basic(T(canvasOf((g) => { info = peeledScene(g); }))), 0, 1.12);
-  const gl = canvasOf((g) => { const gr = g.createLinearGradient(0, 0, 400, 0); gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(0.5, "rgba(255,255,255,.55)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 400, 400); }, 400, 400, 1);
-  const s = st.pxScale(0, 1.12), gleam = new THREE.Mesh(new THREE.PlaneGeometry(120 * s, 300 * s), new THREE.MeshBasicMaterial({ map: tex(gl), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); gleam.rotation.z = -0.5; st.scene.add(gleam);
   st.update = (t) => {
-    const k = seg(t, 0.6, 1.8); gleam.position.copy(st.px(info.fx - 140 + k * 280, info.fy - 20, 3)); gleam.material.opacity = Math.sin(k * Math.PI) * 0.6;
     const f = st.px(info.fx + 60, info.fy + 40, 0), u = ease(seg(t, 0, 3.2));
     cam(st, lerp(0, f.x * 0.6, u), lerp(0, f.y * 0.6, u), lerp(st.D, st.D * 0.7, u), lerp(0, f.x * 0.6, u), lerp(0, f.y * 0.6, u));
     st.look = { blur: 0.005, focus: 0.5, band: 0.18 };

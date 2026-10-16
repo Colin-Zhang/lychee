@@ -294,7 +294,6 @@ export function peeledScene(g) {
   const fx = px - 120, fy = py - 120;
   const fg = g.createRadialGradient(fx - 40, fy - 50, 10, fx, fy, 150); fg.addColorStop(0, "#ffffff"); fg.addColorStop(0.45, "#f1ede4"); fg.addColorStop(0.85, "#c9cfcf"); fg.addColorStop(1, "#9aa6a8");
   g.fillStyle = fg; g.beginPath(); g.ellipse(fx, fy, 128, 140, 0, 0, Math.PI * 2); g.fill();
-  g.strokeStyle = "rgba(180,190,190,.6)"; g.lineWidth = 2; for (let k = 0; k < 9; k++) { g.beginPath(); g.moveTo(fx + (R() - 0.5) * 120, fy - 120); g.quadraticCurveTo(fx + (R() - 0.5) * 160, fy, fx + (R() - 0.5) * 120, fy + 120); g.stroke(); }
   g.fillStyle = "rgba(255,255,255,.75)"; g.beginPath(); g.ellipse(fx - 52, fy - 64, 34, 18, -0.6, 0, Math.PI * 2); g.fill();
   g.fillStyle = "rgba(255,255,255,.5)"; g.beginPath(); g.ellipse(fx + 40, fy + 70, 14, 26, 0.4, 0, Math.PI * 2); g.fill();
   // 一滴汁
