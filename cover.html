@@ -1,0 +1,99 @@
+<!doctype html><html><head><meta charset="utf-8"><title>荔枝 · 封面</title>
+<style>
+  @font-face { font-family: "SerifSC"; src: url("./fonts/NotoSerifSC-Bold.subset.woff2") format("woff2"); font-weight: 700; }
+  @font-face { font-family: "Brush"; src: url("./fonts/MaShanZheng.subset.woff2") format("woff2"); }
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; }
+</style>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js" } }</script></head>
+<body><canvas id="c"></canvas>
+<script>window.addEventListener("error", (e) => { window.failed = e.message || String(e); }); window.addEventListener("unhandledrejection", (e) => { window.failed = String(e.reason && e.reason.stack || e.reason); });</script>
+<script type="module">
+// 封面：古地图做底，朱红路线从岭南走到长安；开场那颗荔枝放在路线起点；路上一骑扬尘奔向长安；毛笔字标题。
+// ?r=3x4 / 9x16 / 4x3 / 16x9 / 16x6（node tools/cover.mjs 一次出全部，存到 out/cover-*.png）
+import { drawMap, P, S, MW, MH } from "./src/map.js";
+import { journey, STOPS } from "./src/journey.js";
+import { openingLychee } from "./src/lychee-detail.js";
+import { drawRider } from "./src/horse.js";
+import { silk, seal } from "./src/art.js";
+
+const SIZES = { "9x16": [1080, 1920], "3x4": [1080, 1440], "4x3": [1440, 1080], "16x9": [1920, 1080], "16x6": [1920, 720] };
+const R = new URLSearchParams(location.search).get("r") || "3x4", [W, H] = SIZES[R];
+const cv = document.getElementById("c"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
+const INK = "#2a1c12", VERM = "#c8321f", PAPER = "rgba(244,232,204,";
+const TITLE = [["三天就坏", VERM], ["的荔枝", INK]], TITLE2 = "怎么送到长安？", POEM = "一骑红尘妃子笑　无人知是荔枝来";
+
+// 各比例的排版：t 标题（x, y 第一行基线, 字号, 对齐, 行距）；p 诗；box 路线要装进的框；ly 荔枝（离广州的偏移、半径）；fade 标题底下压淡地图的区域
+// box：路线要装进的框（广州在框的最下面，荔枝挂在那儿往下垂）；lr：荔枝半径
+const LAYOUT = {
+  "3x4": { t: [540, 192, 124, "center", 150], p: [540, 424, 34], box: [150, 548, 760, 500], lr: 158, fade: "top", stamp: "west", ling: "left" },
+  "9x16": { t: [540, 300, 128, "center", 160], p: [540, 552, 36], box: [140, 690, 780, 800], lr: 196, fade: "top", stamp: "west", ling: "left" },
+  "4x3": { t: [92, 420, 96, "left", 126], p: [96, 610, 30], box: [880, 120, 470, 600], lr: 150, fade: "left", stamp: "east", ling: "left" },
+  "16x9": { t: [130, 420, 128, "left", 162], p: [134, 662, 36], box: [1180, 110, 560, 610], lr: 150, fade: "left", stamp: "east", ling: "right" },
+  "16x6": { t: [110, 296, 96, "left", 124], p: [114, 488, 28], box: [1230, 70, 470, 384], lr: 104, fade: "left", stamp: "east", ling: "right" },
+};
+const L = LAYOUT[R];
+
+await Promise.all([document.fonts.load('80px "Brush"'), document.fonts.load('700 40px "SerifSC"')]);
+
+window.setFrame = () => {
+  const u = Math.min(W, H) / 1080;   // 线宽、小字、印章按短边缩放
+  // ── 地图：路线的外框装进 box，整张图跟着缩放平移
+  const J = journey(), xs = J.pts.map((p) => p[0]), ys = J.pts.map((p) => p[1]);
+  const bx0 = Math.min(...xs), bx1 = Math.max(...xs), by0 = Math.min(...ys), by1 = Math.max(...ys);
+  const [X, Y, BW, BH] = L.box, k = Math.min(BW / (bx1 - bx0), BH / (by1 - by0));
+  const ox = X + (BW - (bx1 - bx0) * k) / 2 - bx0 * k, oy = Y + (BH - (by1 - by0) * k) / 2 - by0 * k, M = ([x, y]) => [ox + x * k, oy + y * k];
+  g.save(); g.fillStyle = "#e9dcbc"; g.fillRect(0, 0, W, H); g.translate(ox, oy); g.scale(k, k); drawMap(g); g.restore();
+  // 地图的边如果落在画面里（比如南边的海岸线以南），边缘晕开成素绢，不留一道硬线
+  { const e0 = M([0, 0]), e1 = M([MW, MH]), band = 140 * (Math.min(W, H) / 1080);
+    const edge = (x0, y0, x1, y1, ax, ay, bx, by) => { const gr = g.createLinearGradient(ax, ay, bx, by); gr.addColorStop(0, "rgba(233,220,188,0)"); gr.addColorStop(1, "rgba(233,220,188,1)"); g.fillStyle = gr; g.fillRect(x0, y0, x1 - x0, y1 - y0); };
+    if (e1[1] < H) { edge(0, e1[1] - band, W, e1[1] + 2, 0, e1[1] - band, 0, e1[1]); g.fillStyle = "#e9dcbc"; g.fillRect(0, e1[1], W, H - e1[1]); }
+    if (e0[1] > 0) { edge(0, e0[1] - 2, W, e0[1] + band, 0, e0[1] + band, 0, e0[1]); g.fillStyle = "#e9dcbc"; g.fillRect(0, 0, W, e0[1]); }
+    if (e0[0] > 0) { edge(e0[0] - 2, 0, e0[0] + band, H, e0[0] + band, 0, e0[0], 0); g.fillStyle = "#e9dcbc"; g.fillRect(0, 0, e0[0], H); }
+    if (e1[0] < W) { edge(e1[0] - band, 0, e1[0] + 2, H, e1[0] - band, 0, e1[0], 0); g.fillStyle = "#e9dcbc"; g.fillRect(e1[0], 0, W - e1[0], H); } }
+  // 整体提亮一点、偏暖（地图本身偏旧），四角压暗
+  g.fillStyle = "rgba(255,244,214,.18)"; g.fillRect(0, 0, W, H);
+  // ── 标题区把地图压淡（字要一眼读出来）
+  if (L.fade === "top") { const gr = g.createLinearGradient(0, 0, 0, L.p[1] + 90); gr.addColorStop(0, PAPER + ".92)"); gr.addColorStop(0.78, PAPER + ".86)"); gr.addColorStop(1, PAPER + "0)"); g.fillStyle = gr; g.fillRect(0, 0, W, L.p[1] + 90); }
+  else { const x1 = L.box[0] - 40, gr = g.createLinearGradient(0, 0, x1, 0); gr.addColorStop(0, PAPER + ".93)"); gr.addColorStop(0.8, PAPER + ".86)"); gr.addColorStop(1, PAPER + "0)"); g.fillStyle = gr; g.fillRect(0, 0, x1, H); }
+  // 竖版左右两边各晕开一窄条（地图左上角自带的图名框会露半截）
+  if (L.fade === "top") for (const [x0, x1] of [[0, 110 * u], [W, W - 110 * u]]) { const gr = g.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, PAPER + ".9)"); gr.addColorStop(1, PAPER + "0)"); g.fillStyle = gr; g.fillRect(Math.min(x0, x1), 0, Math.abs(x1 - x0), H); }
+  // ── 路线：淡光 → 墨边 → 朱红芯（和片子里同一种红）
+  const pts = J.pts.map(M);
+  const line = (w, col, blur = 0) => { g.save(); g.lineJoin = g.lineCap = "round"; g.strokeStyle = col; g.lineWidth = w; if (blur) { g.shadowColor = col; g.shadowBlur = blur; } g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.stroke(); g.restore(); };
+  line(30 * u, "rgba(255,214,150,.55)", 24 * u); line(15 * u, "#3a140a"); line(9.5 * u, "#d93d27"); line(2.4 * u, "rgba(255,226,190,.55)");
+  // 长安：城的方框 + 毛笔字
+  const ca = M(P(...STOPS.长安)), gz = M(P(...STOPS.广州));
+  g.save(); g.fillStyle = "#f3e6c8"; g.strokeStyle = INK; g.lineWidth = 4 * u; const cs = 26 * u; g.fillRect(ca[0] - cs / 2, ca[1] - cs / 2, cs, cs); g.strokeRect(ca[0] - cs / 2, ca[1] - cs / 2, cs, cs); g.fillStyle = VERM; g.beginPath(); g.arc(ca[0], ca[1], 6 * u, 0, Math.PI * 2); g.fill(); g.restore();
+  const lab = (txt, x, y, size, align = "left") => { g.save(); g.font = `${size}px "Brush"`; g.textAlign = align; g.textBaseline = "middle"; g.lineWidth = size * 0.16; g.strokeStyle = "rgba(244,232,204,.9)"; g.lineJoin = "round"; g.strokeText(txt, x, y); g.fillStyle = INK; g.fillText(txt, x, y); g.restore(); };
+  lab("长安", ca[0] - 22 * u, ca[1] - 4 * u, 62 * u, "right");
+  // ── 一骑红尘：路上离长安不远的地方，一骑朝长安跑（朝左），身后扬起黄尘
+  const along = (f) => { let best = 0; const target = J.length * f, cum = [0]; for (let i = 1; i < J.pts.length; i++) cum.push(cum[i - 1] + Math.hypot(J.pts[i][0] - J.pts[i - 1][0], J.pts[i][1] - J.pts[i - 1][1])); while (best < cum.length - 1 && cum[best] < target) best++; return M(J.pts[best]); };
+  const rp = along(0.83), rs = 0.56 * u;
+  for (let i = 0; i < 26; i++) { const a = i / 25, x = rp[0] + (40 + a * 260) * u, y = rp[1] - (6 + a * 50 + Math.sin(i * 1.7) * 12) * u, r = (18 + a * 60) * u; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(236,206,150,${0.42 * (1 - a) + 0.06})`); gr.addColorStop(1, "rgba(236,206,150,0)"); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+  g.save(); g.translate(rp[0], rp[1] + 6 * u); g.scale(-1, 1); drawRider(g, 0, 0, rs, 0.82, { cargo: "tube", rim: "rgba(255,226,180,.7)" }); g.restore();
+  // ── 主角：开场那颗荔枝，压在路线起点（岭南）上；底下一团暖光和影子把它从地图上托出来
+  const lr = L.lr, D = lr / 0.3, ix = gz[0] - 0.515 * D, iy = gz[1] - 0.254 * D, lx = ix + 0.5 * D, lyy = iy + 0.56 * D;   // 贴图里叶柄的根在 (0.515, 0.254)，对到广州
+  { const gr = g.createRadialGradient(lx, lyy, lr * 0.5, lx, lyy, lr * 1.9); gr.addColorStop(0, "rgba(255,236,190,.7)"); gr.addColorStop(1, "rgba(255,236,190,0)"); g.fillStyle = gr; g.fillRect(lx - lr * 2, lyy - lr * 2, lr * 4, lr * 4); }
+  g.save(); g.translate(lx + lr * 0.12, lyy + lr * 1.02); g.scale(1, 0.24); const sg = g.createRadialGradient(0, 0, 0, 0, 0, lr * 1.05); sg.addColorStop(0, "rgba(60,30,14,.38)"); sg.addColorStop(1, "rgba(60,30,14,0)"); g.fillStyle = sg; g.beginPath(); g.arc(0, 0, lr * 1.05, 0, Math.PI * 2); g.fill(); g.restore();
+  g.drawImage(openingLychee(1536, { age: 0 }), ix, iy, D, D);
+  if (L.ling === "left") lab("岭南", gz[0] - lr * 1.62, gz[1] + lr * 0.3, 56 * u, "right"); else lab("岭南", gz[0] + lr * 1.62, gz[1] + lr * 0.34, 56 * u, "left");
+  // ── 里程章：五千二百一十里（竖条朱印，贴在路线旁边）
+  { const b0 = M([bx0, by0]), b1 = M([bx1, by1]), sz = 36 * u, n = 7, hgt = n * sz * 1.06 + sz * 0.7, wdt = sz * 1.5, x = L.stamp === "west" ? b0[0] + (b1[0] - b0[0]) * 0.06 : b1[0] + 26 * u, y = b0[1] + (b1[1] - b0[1]) * (L.stamp === "west" ? 0.27 : 0.12);
+    g.save(); g.translate(x + wdt / 2, y + hgt / 2); g.rotate(-0.03); g.fillStyle = "rgba(190,44,30,.94)"; g.fillRect(-wdt / 2, -hgt / 2, wdt, hgt); g.fillStyle = "#f6e9cf"; g.font = `${sz}px "Brush"`; g.textAlign = "center"; g.textBaseline = "middle";
+    [..."五千二百一十里"].forEach((ch, i) => g.fillText(ch, 0, -hgt / 2 + sz * 0.85 + i * sz * 1.06)); g.restore(); }
+  // ── 标题
+  const [tx, ty, ts, align, lh] = L.t;
+  const write = (segs, x, y, size) => { g.save(); g.font = `${size}px "Brush"`; g.textBaseline = "alphabetic"; const total = segs.reduce((w, [t]) => w + g.measureText(t).width, 0); let cx = align === "center" ? x - total / 2 : x;
+    for (const [t, col] of segs) { g.lineJoin = "round"; g.lineWidth = size * 0.12; g.strokeStyle = "rgba(250,240,216,.95)"; g.strokeText(t, cx, y); g.shadowColor = "rgba(60,30,10,.18)"; g.shadowBlur = size * 0.08; g.shadowOffsetY = size * 0.03; g.fillStyle = col; g.fillText(t, cx, y); g.shadowColor = "transparent"; cx += g.measureText(t).width; } g.restore(); return total; };
+  write(TITLE, tx, ty, ts); const w2 = write([[TITLE2, INK]], tx, ty + lh, ts);
+  // 诗一句（细朱线隔开）+ 频道的小印
+  const [px, py, ps] = L.p; g.save(); g.font = `700 ${ps}px "SerifSC"`; g.fillStyle = "rgba(60,36,22,.78)"; g.textAlign = align === "center" ? "center" : "left"; g.textBaseline = "middle"; g.fillText(POEM, px, py);
+  const pw = g.measureText(POEM).width, rx0 = align === "center" ? px - pw / 2 : px; g.restore();
+  const sk = ps * 2.5, sl = seal("钳沿", 200); g.save(); g.translate(rx0 + pw + ps * 0.8 + sk / 2, py); g.rotate(0.04); g.drawImage(sl, -sk / 2, -sk / 2, sk, sk); g.restore();
+  // 绢纹 + 四角暗
+  silk(g, W, H, { tone: null, seed: 9, vign: 0.3, fibers: 0.35 });
+  return true;
+};
+window.ready = true;
+</script></body></html>

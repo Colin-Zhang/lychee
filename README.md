@@ -19,6 +19,8 @@ node render.mjs --every 30 --frames-only         # 每秒一帧，先看联系�
 node render.mjs --from 42 --to 60 --out out/路上.mp4   # 只渲一段（第 13–14 屏）
 npm run preview                                  # 浏览器里看 http://localhost:5173/index.html，底部进度条可拖
 ```
+封面：`node tools/cover.mjs` → `out/cover-9x16.png`、`cover-3x4.png`、`cover-4x3.png`、`cover-16x9.png`、`cover-16x6.png`（画法在 `cover.html`：古地图做底，朱红路线从岭南一直伸到长安，开场那颗荔枝挂在岭南那头，路上一骑奔向长安）。
+
 第一次打开要先画古地图、读地形，一两分钟。码率封顶 8Mbps；想更小加 `--maxrate 5M`。渲完 `out/frames` 可以删。
 服务器上只做低配检查：`node render.mjs --lite --q dem=3`（地图和插画分辨率减半，地形粗一倍）。
 
