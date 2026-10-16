@@ -120,7 +120,7 @@ export function lychee(size, opt = {}) { const c = mk(size, size), g = c.getCont
 
 // ───────────────── 骑马的人（侧面，朝右）─────────────────
 /** 在 (x, y)（地面）画一骑，s=1 时约 200 像素宽；phase 0–1 是奔跑的一个周期 */
-export function riderArt(g, x, y, s, phase, { jars = 1, color = INK, far = "#5a4c3f", accent = VERM, robe = "#3a2a1e" } = {}) {
+export function riderArt(g, x, y, s, phase, { jars = 1, color = INK, far = "#5a4c3f", accent = VERM, robe = "#3a2a1e", cargo = "jar" } = {}) {
   g.save(); g.translate(x, y); g.scale(s, s);
   const q = (o) => Math.PI * 2 * (phase + o), bob = -3 * Math.sin(Math.PI * 4 * phase);
   g.translate(0, bob);
@@ -154,8 +154,16 @@ export function riderArt(g, x, y, s, phase, { jars = 1, color = INK, far = "#5a4
   stroke(g, smooth([[16, -138], [5, -138 + hw], [-5, -133 + hw * 1.4]], 4), 2.4, 1, color);
   // 背上的瓮（红封口）
   const jar = (jx, jy, k = 1) => { g.save(); g.translate(jx, jy); g.scale(k, k); fillPath(g, smooth([[-6, -12], [6, -12], [9, -4], [8, 8], [0, 13], [-8, 8], [-9, -4]], 4, true), "#6b4630"); g.fillStyle = accent; g.fillRect(-6, -15, 12, 4); g.strokeStyle = "rgba(20,14,10,.6)"; g.lineWidth = 1; g.beginPath(); g.moveTo(-8, 1); g.lineTo(8, 1); g.stroke(); g.restore(); };
-  jar(-14, -116, 1);
-  if (jars > 1) jar(-26, -80, 1.15);
+  if (cargo === "tube") {
+    // 背上一捆竹筒（红布扎口、朱红封泥），后面拖一条红绸
+    const fl = Math.sin(q(0.1)) * 4;
+    stroke(g, smooth([[-4, -134], [-22, -139 + fl], [-42, -134 + fl * 1.5], [-62, -140 + fl * 2.2]], 6), 5, 1.5, accent);
+    for (let k = 0; k < 3; k++) { const ox = -k * 5.5, oy = k * 2.2; stroke(g, [[-14 + ox, -96 + oy], [2 + ox, -134 + oy]], 6.5, 6.5, k === 1 ? "#b3a865" : "#9d9452"); g.fillStyle = "rgba(40,36,16,.75)"; for (let m = 1; m < 4; m++) { const f = m / 4; g.fillRect(-14 + ox + 16 * f - 3.5, -96 + oy - 38 * f, 7, 1.6); } g.fillStyle = accent; g.beginPath(); g.arc(2 + ox, -134 + oy, 3.6, 0, Math.PI * 2); g.fill(); }
+    g.save(); g.translate(-11, -116); g.rotate(-1.18); g.fillStyle = accent; g.fillRect(-4, -11, 8, 22); g.restore();
+  } else {
+    jar(-14, -116, 1);
+    if (jars > 1) jar(-26, -80, 1.15);
+  }
   hind(0, color); front(0.42, color);
   g.restore();
 }
@@ -171,6 +179,24 @@ export function boatArt(g, x, y, s, phase = 0, { color = INK, accent = VERM } = 
   for (let i = 1; i < 5; i++) { const yy = lerp(-110, -34, i / 5); g.beginPath(); g.moveTo(20, yy); g.lineTo(57, yy + 6); g.stroke(); }
   fillPath(g, [[18, -118], [36, -128], [18, -132]], accent);
   g.strokeStyle = "rgba(61,111,138,.6)"; g.lineWidth = 2; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(-70 + i * 30, 4, 10, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); }
+  g.restore();
+}
+/** 船尾摇橹的船夫（戴斗笠，弓步，双手推橹；橹从手里斜着伸到船后的水里）。脚在 (x, y)，面朝 +x */
+export function boatmanArt(g, x, y, s, phase, { color = INK } = {}) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  const a = Math.sin(phase * Math.PI * 2), lean = 0.18 + a * 0.12;
+  stroke(g, [[-4, -46], [-16, -24], [-20, 0]], 9, 6, "#4a3e33"); stroke(g, [[-4, -46], [10, -24], [16, 0]], 9, 6, color);
+  g.fillStyle = color; g.fillRect(-26, -3, 11, 4); g.fillRect(12, -3, 11, 4);
+  g.save(); g.translate(-4, -46); g.rotate(lean);
+  fillPath(g, smooth([[-9, 2], [-8, -30], [0, -40], [9, -30], [10, 2]], 4, true), color);
+  g.beginPath(); g.arc(1, -48, 7, 0, Math.PI * 2); g.fill();
+  fillPath(g, [[-17, -51], [1, -64], [19, -51]], "#8a6a3e"); g.strokeStyle = color; g.lineWidth = 2; g.beginPath(); g.moveTo(-17, -51); g.lineTo(1, -64); g.lineTo(19, -51); g.closePath(); g.stroke();
+  const lx = 22 + a * 8, ly = -26 - a * 2;
+  stroke(g, [[2, -34], [12, -26], [lx, ly]], 5.5, 4, color); stroke(g, [[-2, -32], [8, -22], [lx - 3, ly + 2]], 5, 4, color);
+  g.restore();
+  const hx = -4 + Math.cos(lean) * lx - Math.sin(lean) * ly, hy = -46 + Math.sin(lean) * lx + Math.cos(lean) * ly;
+  stroke(g, [[hx, hy], [-36, -6], [-118, 44 + a * 4]], 3.4, 2.6, "#3a2a1c");
+  fillPath(g, [[-104, 36 + a * 4], [-124, 42 + a * 4], [-128, 52 + a * 4], [-108, 48 + a * 4]], "#3a2a1c");
   g.restore();
 }
 export function boatSprite(size, phase) { const c = mk(size, size), g = c.getContext("2d"); boatArt(g, size * 0.5, size * 0.86, size / 180, phase); return c; }

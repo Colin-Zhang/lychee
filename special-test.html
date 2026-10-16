@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><title>特殊场景 · 试样</title>
+<style>@font-face{font-family:"Brush";src:url("./fonts/MaShanZheng.subset.woff2")}@font-face{font-family:"NotoSerif";src:url("./fonts/NotoSerifSC-Regular.subset.woff2")}html,body{margin:0;background:#140d07;overflow:hidden}#stage{position:relative;width:1920px;height:1080px}</style>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js" } }</script></head>
+<body><div id="stage"></div>
+<script>window.addEventListener("error", (e) => { window.failed = e.message || String(e); }); window.addEventListener("unhandledrejection", (e) => { window.failed = String(e.reason && e.reason.stack || e.reason); });</script>
+<script type="module">
+// 立体场景试样：?scene=meiling / ganjiang / jiujiang / xiangyang / languan / lishan；?dem=3 服务器上用粗一点的地形；?ss=2 两倍超采样（成片）
+import { renderer, renderFrame } from "./src/engine.js";
+import { loadDEM } from "./src/dem.js";
+import { PLACE_CFG } from "./src/places.js";
+import { LOOKS } from "./src/scenes3d.js";
+import { buildScene3D } from "./src/scene3d.js";
+import { Overlay } from "./src/labels.js";
+document.getElementById("stage").appendChild(renderer.domElement);
+await document.fonts.load('40px "Brush"'); await document.fonts.load('24px "NotoSerif"');
+const Q = new URLSearchParams(location.search), name = Q.get("scene") || "meiling", cfg = { ...PLACE_CFG[name], stride: Number(Q.get("dem") || 2) };
+const t0 = performance.now();
+const [dem, far] = await Promise.all([loadDEM(cfg.dem), loadDEM(cfg.far)]);
+const st = buildScene3D(dem, far, cfg, LOOKS[name]);
+st.overlay = new Overlay(document.getElementById("stage"));
+console.log("build", name, ((performance.now() - t0) / 1000).toFixed(1), "s, dur", st.DUR);
+window.__st = st;
+window.setFrame = (t) => { st.shot(t); renderFrame(st, null, 0, { time: t }); return true; };
+window.DUR = st.DUR; window.ready = true;
+</script></body></html>

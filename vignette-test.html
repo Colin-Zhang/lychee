@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><title>插画布景 · 试样</title>
+<style>@font-face{font-family:"SerifSC";src:url("./fonts/NotoSerifSC-Regular.subset.woff2");font-weight:400}@font-face{font-family:"SerifSC";src:url("./fonts/NotoSerifSC-Bold.subset.woff2");font-weight:700}@font-face{font-family:"Brush";src:url("./fonts/MaShanZheng.subset.woff2")}html,body{margin:0;background:#140d07;overflow:hidden}#stage{position:relative;width:1920px;height:1080px}</style>
+<script>window.addEventListener("error", (e) => { window.failed = e.message || String(e); });</script>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js" } }</script></head>
+<body><div id="stage"></div>
+<script type="module">
+// 单个插画布景试样：?v=decay / plate / book / orchard / tube / station / ride / fallen / peel；时间是本段时间
+import { renderer, renderFrame } from "./src/engine.js";
+import * as V from "./src/vignettes4.js";
+document.getElementById("stage").appendChild(renderer.domElement);
+await Promise.all([document.fonts.load('40px "Brush"'), document.fonts.load('700 40px "SerifSC"')]);
+const B = { decay: V.buildDecay4, plate: V.buildPlate, book: V.buildBook, orchard: V.buildOrchard4, tube: V.buildTube, station: V.buildStation, ride: V.buildRide, fallen: V.buildFallen, peel: V.buildPeel4 };
+const st = B[new URLSearchParams(location.search).get("v") || "orchard"]();
+window.setFrame = (t) => { st.update(t); renderFrame(st, null, 0, { time: t }); return true; };
+window.ready = true;
+</script></body></html>

@@ -1,4 +1,5 @@
-// 逐帧渲染：node render.mjs [--fps 30] [--from 0] [--to 10] [--out out/lychee.mp4] [--every 1] [--crf 21] [--maxrate 8M]
+// 逐帧渲染：node render.mjs [--fps 30] [--from 0] [--to 10] [--out out/lychee.mp4] [--every 1] [--crf 21] [--maxrate 8M] [--page special-test.html] [--q ss=2]
+//   --page 换一个页面渲（比如特殊场景试样 special-test.html、地图红线试样 map2d-test.html）；--q 加网址参数（ss=2 立体场景两倍超采样，更细）
 //   --every 10  每 10 帧取一帧（快速看效果）；--frames-only 只出 jpg 不合成视频
 //   Chrome 路径：环境变量 CHROME_PATH；不设就按系统找常见位置（Windows 的 Chrome / Edge、macOS、Linux）
 import puppeteer from "puppeteer-core";
@@ -32,7 +33,8 @@ const page = await browser.newPage();
 page.on("console", (m) => { if (m.type() === "error") console.error("[page]", m.text()); });
 page.on("pageerror", (e) => console.error("[page error]", e.message));
 await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 });
-await page.goto(`http://127.0.0.1:${port}/index.html?render=1${LITE}`, { waitUntil: "load", timeout: 0 });
+const PAGE = arg("page", "index.html"), Q = arg("q", "");
+await page.goto(`http://127.0.0.1:${port}/${PAGE}?render=1${LITE}${Q ? "&" + Q : ""}`, { waitUntil: "load", timeout: 0 });
 const tl = Date.now(); await page.waitForFunction("window.ready === true", { timeout: 1800000, polling: 1000 }); console.log(`布景画完，用时 ${((Date.now() - tl) / 1000).toFixed(0)} 秒`);
 await page.evaluate(() => document.fonts.ready);
 const DUR = await page.evaluate(() => window.DUR);

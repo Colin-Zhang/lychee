@@ -1,0 +1,57 @@
+<!doctype html><html><head><meta charset="utf-8"><title>地图红线 · 试样</title>
+<style>@font-face{font-family:"Brush";src:url("./fonts/MaShanZheng.subset.woff2")}@font-face{font-family:"NotoSerif";src:url("./fonts/NotoSerifSC-Regular.subset.woff2")}html,body{margin:0;background:#140d07;overflow:hidden}#stage{position:relative;width:1920px;height:1080px}</style>
+<script>window.addEventListener("error", (e) => { window.failed = e.message || String(e); }); window.addEventListener("unhandledrejection", (e) => { window.failed = String(e.reason && e.reason.stack || e.reason); });</script>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js" } }</script></head>
+<body><div id="stage"></div>
+<script type="module">
+// 2D 古地图上的路线（加粗版）：朱红线芯 + 墨色描边 + 一圈淡影；走过的实线，没走到的虚线；线头一点红光
+// 演示：0–4 秒全图，红线从广州画到大庾岭；4–8 秒推近大庾岭一带；8–12 秒拉回全图，红线画到长安
+import * as THREE from "three";
+import { renderer, renderFrame, tex, Stage, W, H } from "./src/engine.js";
+import { drawMap, MW, MH, P, S } from "./src/map.js";
+import { journey } from "./src/journey.js";
+import { RouteRibbon, densify } from "./src/route3d.js";
+import { mk } from "./src/art.js";
+document.getElementById("stage").appendChild(renderer.domElement);
+await document.fonts.load('40px "Brush"'); await document.fonts.load('24px "NotoSerif"');
+const st = new Stage(30); st.camera.near = 10; st.camera.far = 200000;
+const TW = Math.ceil(MW / 2), TH = Math.ceil(MH / 2);
+for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
+  const c = mk(TW, TH), g = c.getContext("2d"); g.translate(-i * TW, -j * TH); drawMap(g);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(TW, TH), new THREE.MeshBasicMaterial({ map: tex(c, { mip: true, free: true }) }));
+  m.rotation.x = -Math.PI / 2; m.position.set(i * TW + TW / 2 - MW / 2, 0, j * TH + TH / 2 - MH / 2); st.scene.add(m);
+}
+const J = journey(), dense = densify(J.pts.map((p, i) => [p[0], p[1], J.kinds[i]]), 2 * S);
+const route = new RouteRibbon(dense.map(([x, y]) => [x - MW / 2, 2, y - MH / 2]), { kinds: dense.map((p) => p[2]), core: 9, edge: 0.2, halo: 1.0, haloA: 0.24, col: "#de3d27", edgeCol: "#3a140a", haloCol: "#1e1008", glowCol: "#ffe0a8", ahead: 0.6, order: 30 });
+route.addTo(st.scene); route.u.uDash.value = 1;
+const { Overlay, PLACES } = await import("./src/labels.js");
+const ov = new Overlay(document.getElementById("stage"));
+// 沿途的站：线头经过时冒出“古名 + 今地名”，停 2.6 秒再淡出
+const STOPS = ["韶州", "大庾岭", "虔州", "洪州", "江州", "鄂州", "襄州", "商州", "长安"].map((n) => ({ n, p: J.at(n), xy: P(...{ 韶州: [113.6, 24.81], 大庾岭: [114.32, 25.33], 虔州: [114.93, 25.83], 洪州: [115.86, 28.68], 江州: [116.0, 29.71], 鄂州: [114.3, 30.6], 襄州: [112.14, 32.04], 商州: [109.94, 33.87], 长安: [108.94, 34.34] }[n]) }));
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), seg = (t, a, b) => clamp((t - a) / (b - a)), ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2), lerp = (a, b, k) => a + (b - a) * k;
+const pDayu = J.at("大庾岭"), full = { c: [MW * 0.5, MH * 0.52], vis: MW * 0.98 }, near = { c: P(114.5, 25.7), vis: MW * 0.22 };
+const view = (c, vis) => { const D = vis / (2 * (W / H) * Math.tan((st.camera.fov * Math.PI) / 360)); st.camera.position.set(c[0] - MW / 2, D, c[1] - MH / 2); st.camera.up.set(0, 0, -1); st.camera.lookAt(c[0] - MW / 2, 0, c[1] - MH / 2); };
+window.setFrame = (t) => {
+  let prog, v;
+  if (t < 4) { prog = lerp(0, pDayu, ease(seg(t, 0.5, 3.6))); v = full; }
+  else if (t < 8) { const k = ease(seg(t, 4, 6)); prog = lerp(pDayu, J.at("虔州") + 0.02, ease(seg(t, 5, 7.6))); v = { c: [lerp(full.c[0], near.c[0], k), lerp(full.c[1], near.c[1], k)], vis: Math.exp(lerp(Math.log(full.vis), Math.log(near.vis), k)) }; }
+  else { const k = ease(seg(t, 8, 9.6)); prog = lerp(J.at("虔州") + 0.02, 1, ease(seg(t, 8.6, 11.6))); v = { c: [lerp(near.c[0], full.c[0], k), lerp(near.c[1], full.c[1], k)], vis: Math.exp(lerp(Math.log(near.vis), Math.log(full.vis), k)) }; }
+  view(v.c, v.vis); route.set(prog, { head: 60 * S });
+  renderFrame(st, null, 0, { time: t });
+  st.camera.updateMatrixWorld(); ov.clear();
+  const zoom = full.vis / v.vis;   // 推近时标签可以多一些
+  const last = STOPS.filter((sp) => prog >= sp.p).pop();
+  for (const sp of STOPS) {
+    const tPass = sp.p, age = prog >= tPass ? 1 : 0; if (!age) continue;
+    if (zoom <= 2 && sp !== last) continue;   // 全图里只标刚经过的那一站
+    const q = Overlay.screen(new THREE.Vector3(sp.xy[0] - MW / 2, 0, sp.xy[1] - MH / 2), st.camera); if (!q) continue;
+    // 线头刚过的那一站最清楚，之前的站在全图里淡下去
+    const recent = 1 - Math.min(1, Math.max(0, (prog - tPass) / 0.08)), a = Math.max(recent, sp.n === "长安" && prog > 0.995 ? 1 : 0, zoom > 2 ? 1 : 0.0);
+    ov.modern(PLACES[sp.n], q[0], q[1], { a, dx: 14, dy: 22 + 8 * Math.min(3, zoom) });
+  }
+  const h = route.at(prog), hq = Overlay.screen(new THREE.Vector3(h.x, 2, h.z), st.camera);
+  if (hq && prog < 0.999) ov.head(hq[0], hq[1], t, { flat: 1, size: 58, stem: 26 });
+  return true;
+};
+window.DUR = 12; window.ready = true;
+</script></body></html>

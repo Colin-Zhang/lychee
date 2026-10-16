@@ -1,36 +1,51 @@
-# 长安的荔枝：荔枝从岭南运到长安（2 分 24 秒，只放中英字幕，不配 BGM）
+# 荔枝怎么送到长安（第四稿，约 87 秒，只放中英字幕，不配 BGM）
 
-按马伯庸小说《长安的荔枝》的情节讲（字幕全是自己的话，对着原书核过事实，见 `字幕-第三稿.md`；第 33 句按史实改成“弃城西逃”：贵妃死在马嵬驿，没有入蜀）。
-画面全部用代码画（原创示意）：一张仿宋代石刻地图“计里画方”的古地图是主舞台，加上开场山水、长安城坊图、公文、荔枝三日变色、双层瓮剖面图（天工开物式）、春明门、剥开的荔枝、天平、荔枝园几场插画；人物只出剪影。three.js 逐帧渲染，镜头斜着贴近地图飞。
+只讲一件事：一颗荔枝，怎么从岭南新鲜地送到长安。史书只留下“置骑传送，走数千里，味未变已至京师”一句，其余一步步推算；诗只在最后（杜牧《过华清宫》）。字幕和出处见 `字幕-第四稿.md`。
 
-## 跑起来
+画面三种：
+- **古地图（2D）**：只有一根朱红路线——走过的实线，没走到的虚线；线头是一颗插在细针上的荔枝；经过的城旁边补一行“今……”。第 2–3 屏（五千二百一十里；常人马行日七十里，三天只走得出二百一十里，荔枝坏了）、第 13 屏开头、第 15 屏（第十日到长安）。
+- **特殊场景（立体）**：真实地形（SRTM 高程，竖向夸张 1.35 倍）画成青绿山水，一个不切的航拍镜头跟着线头走，左上角小地图告诉观众走到哪了。翻大庾岭（第 13 屏）；下赣江（虔州）、渡长江（江州，背后是庐山）、上汉水（襄州）、越秦岭（第 14 屏，字幕一处一处加上去）；片尾骊山黄昏，山上的灯一盏盏亮起，一骑红尘奔向山脚（第 18–21 屏）。
+- **插画（剪影）**：荔枝三日变色、长安的一盘荔枝、《新唐书·后妃传》的一页（朱笔圈点那一句）、天亮前后的荔枝园和剪枝、封竹筒、驿站交接、日夜奔跑、倒下的马、剥开的荔枝。
+
+## 渲染
 
 需要 Node 18+、Chrome / Edge、ffmpeg（在 PATH 里）。
 
 ```bash
 npm install
-npm run preview                 # 浏览器打开 http://localhost:5173/index.html（第一次要等十几秒画地图），底部进度条可拖
-npm run render                  # 逐帧渲染 → out/lychee.mp4（1920×1080，30 帧，约 4320 帧）
-node render.mjs --every 30 --frames-only        # 每秒一帧，快速看效果（out/frames）
-node render.mjs --from 76 --to 100 --out out/上路.mp4   # 只渲一段
-node debug.mjs 31,58,85.5       # 打开页面，打印报错，截这几个时刻的画面到 out/dbg-*.jpg
+node render.mjs                                  # 整片 → out/lychee.mp4（1920×1080，30 帧，约 2600 帧）
+node render.mjs --q ss=2                         # 立体场景两倍超采样（更细，立体那几段慢 3–4 倍）
+node render.mjs --every 30 --frames-only         # 每秒一帧，先看联系表（out/frames）
+node render.mjs --from 42 --to 60 --out out/路上.mp4   # 只渲一段（第 13–14 屏）
+npm run preview                                  # 浏览器里看 http://localhost:5173/index.html，底部进度条可拖
 ```
-没有 BGM：成片是无声的，传抖音时在 App 里自己配乐。
+第一次打开要先画古地图、读地形，一两分钟。码率封顶 8Mbps；想更小加 `--maxrate 5M`。渲完 `out/frames` 可以删。
+服务器上只做低配检查：`node render.mjs --lite --q dem=3`（地图和插画分辨率减半，地形粗一倍）。
 
-**文件大小**：默认码率封顶 8Mbps，整片约 140MB；想更小加 `--maxrate 5M`（约 90MB）。已经渲好的大文件不用重渲，直接再压一遍：
-`ffmpeg -i out/lychee.mp4 -c:v libx264 -preset slow -crf 21 -maxrate 8M -bufsize 16M -pix_fmt yuv420p -movflags +faststart out/lychee-抖音.mp4`。
-渲完以后 `out/frames`（几千张 jpg，一两个 G）可以删掉。
+单独看某一段：
+```bash
+node stills.mjs 2,5 --page=special-test.html --q="scene=meiling"      # 立体场景：meiling / ganjiang / jiujiang / xiangyang / languan / lishan（本段时间）
+node stills.mjs 1.5,4 --page=vignette-test.html --q="v=orchard"      # 插画：decay / plate / book / orchard / tube / station / ride / fallen / peel
+node stills.mjs 3.6 --page=map2d-test.html --lite                    # 古地图红线
+```
 
 ## 代码
 
 | 文件 | 内容 |
 | --- | --- |
-| `src/timeline.js` | 35 句字幕（中英）+ 片尾；布景的先后（相邻重叠处墨晕开转场） |
-| `src/main.js` | 总控：挑布景、转场、屏幕层（计数章、图例、百坛存一、保鲜刻度、年份章、片尾）、字幕 |
-| `src/engine.js` | three.js 渲染器、合成（移轴景深、墨晕开转场、暖调、暗角、胶片颗粒）、平面布景工具 |
-| `src/map.js` / `src/geo.js` | 古地图的画法（青绿山峦、双线长江黄河、驿道、城郭、题记、图名、印章、折痕）和地理数据（海岸、江河、山脉、城、路线、驿道、四条试走的路、叛军、西逃） |
-| `src/mapset.js` | 地图布景：四块底图、镜头、所有叙事标记（起止印、预览线、逐格点亮、三道天险、天下驿站、三日红线、南下、四条路、上路的马 / 船 / 挑夫、地名朱圈、第 N 日签、压暗、贬回岭南、叛军与西逃、最后亮线） |
-| `src/inkline.js` | 地图上会“画出来”的墨线、驿站点 |
-| `src/vignettes.js` / `src/scenes2d.js` / `src/art.js` | 插画布景、插画画法、画笔和小剪影（马、船、挑夫、人物、骆驼、荔枝、树） |
+| `src/timeline.js` | 21 屏中英字幕和每段布景的起止（相邻重叠处墨晕开转场）；小地图上线头的位置 |
+| `src/main.js` | 总控：按时间挑布景、转场、标签层、计数章、小地图、诗的出处、字幕 |
+| `src/engine.js` | three.js 渲染器、合成（景深、墨晕开、暖调、暗角、颗粒、渐黑） |
+| `src/mapset4.js` / `src/journey.js` / `src/map.js` / `src/geo.js` | 古地图布景（三段）、第四稿的路线、古地图的画法和地理数据 |
+| `src/route3d.js` | 加粗的路线（屏幕上按像素算粗细；走过实线、没走到虚线、被山挡住的半透明；线头发亮）——地图和立体场景共用 |
+| `src/labels.js` | 最上层的 2D 画布：地名标签（古名 + 今地名）、荔枝线头 |
+| `src/scene3d.js` / `src/scenes3d.js` / `src/places.js` | 立体场景：通用的搭法（地形、水、树、红线、骑手 / 船、镜头关键帧）、六个场景各自的天光镜头标签、地面配置 |
+| `src/land.js` / `src/dem.js` / `src/landform.js` | 真实地形、水系（填洼、汇流、出河道；宽河顺着水势的水面）、按坡度找山路、平滑——纯 JS，node 里也能跑 |
+| `src/shanshui.js` | 青绿山水的三维画法：地形着色、河、大水面、天、石板路、一株株画出来的树、人马剪影卡片、尘土、乌篷船、按深度勾墨线的后期 |
+| `src/vignettes4.js` / `src/scenes2d.js` / `src/art.js` | 插画布景、插画画法、画笔和剪影（骑手背竹筒、船夫摇橹、荔枝……） |
+| `data/`、`tools/dem.py` | 真实高程（大庾岭 17 米一格，其余 32–35 米一格，外围 130 米一格）和下载脚本；数据来自 AWS Terrain Tiles（SRTM 等公开数据），下载时清掉了零星的尖刺和坑 |
+| `tools/landmap.mjs` + `tools/landmap.py` | 立体场景的俯视检查图（路、河、大水面、每公里刻度），挑镜头位置用 |
 
-改了字幕、地名或题记里的字，跑一次 `tools-subset.sh` 重新裁剪字体（需要 fonttools 和原字体文件，说明在脚本开头）。字体都是 OFL 开源授权（思源宋体、马善政体、Cormorant Garamond），许可证在 `fonts/`。
+改了字幕或标签里的字，跑一次 `tools-subset.sh` 重新裁剪字体（需要 fonttools 和原字体文件，说明在脚本开头）。字体都是 OFL 开源授权（思源宋体、马善政体、Cormorant Garamond），许可证在 `fonts/`。
+
+更早的版本（按小说讲的 2 分 24 秒版、`字幕-第一稿` / `第三稿`）在 git 历史里。

@@ -1,5 +1,5 @@
 // 古地图（原创示意，不是任何真实古地图的复制）：旧绢 + 绢纹 + 折痕，海上鱼鳞波，曲折的海岸和小岛，上游细下游粗的江河（长江、黄河画双线），
-// 青绿山水画法的成片山峦（勾线、披麻皴、点苔、石青赭石晕染），淡朱驿道，城郭、关隘、题记、计里画方、图名与印章。
+// 青绿山水画法的成片山峦（勾线、披麻皴、点苔、石青赭石晕染），淡墨驿道，城郭、关隘、题记、计里画方、图名与印章。
 // 分辨率 KY 像素 / 纬度；S = KY / 230 是线宽、字号的缩放。drawMap(g, ox, oy) 画整张图（g 已平移到某一块），分块绘制时每块调用一次，结果一致。
 import { VIEW, COAST, HAINAN, ISLETS, TAIWAN, RIVERS, LAKES, RANGES, HIGHLANDS, CITIES, LABELS, ROUTE, ROADS } from "./geo.js";
 
@@ -13,7 +13,7 @@ export const CELL = 0.486 * KY;
 export const INK = "#2b2219", VERM = "#b8342a", AZURE = "#3d6f8a";
 
 const rnd = (s) => { let x = s >>> 0 || 1; return () => { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; };
-function fractal(pts, depth, rough, seed) {
+export function fractal(pts, depth, rough, seed) {
   const R = rnd(seed); let cur = pts;
   for (let d = 0; d < depth; d++) {
     const out = [cur[0]];
@@ -74,8 +74,9 @@ export function drawMap(g) {
   ISLETS.forEach(([lon, lat, r], i) => { const [x, y] = P(lon, lat), pts = []; for (let a = 0; a < 9; a++) { const t = (a / 9) * Math.PI * 2; pts.push([x + Math.cos(t) * r * KX * (0.7 + R() * 0.5), y + Math.sin(t) * r * KY * (0.7 + R() * 0.5)]); } pts.push(pts[0]); island(pts, 20 + i); });
 
   // ── 计里画方
-  for (let i = 0, x = 0; x < MW; x += CELL, i++) { g.strokeStyle = i % 5 ? "rgba(184,52,42,.15)" : "rgba(184,52,42,.30)"; g.lineWidth = (i % 5 ? 1.2 : 2) * S; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, MH); g.stroke(); }
-  for (let j = 0, y = 0; y < MH; y += CELL, j++) { g.strokeStyle = j % 5 ? "rgba(184,52,42,.15)" : "rgba(184,52,42,.30)"; g.lineWidth = (j % 5 ? 1.2 : 2) * S; g.beginPath(); g.moveTo(0, y); g.lineTo(MW, y); g.stroke(); }
+  // 网格用淡墨（像石刻拓本），红色只留给荔枝走的那条路
+  for (let i = 0, x = 0; x < MW; x += CELL, i++) { g.strokeStyle = i % 5 ? "rgba(96,72,46,.11)" : "rgba(96,72,46,.22)"; g.lineWidth = (i % 5 ? 1.2 : 2) * S; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, MH); g.stroke(); }
+  for (let j = 0, y = 0; y < MH; y += CELL, j++) { g.strokeStyle = j % 5 ? "rgba(96,72,46,.11)" : "rgba(96,72,46,.22)"; g.lineWidth = (j % 5 ? 1.2 : 2) * S; g.beginPath(); g.moveTo(0, y); g.lineTo(MW, y); g.stroke(); }
 
   // ── 湖
   LAKES.forEach(([, [lon, lat], [rx, ry]], i) => {
@@ -103,8 +104,8 @@ export function drawMap(g) {
     }
   });
 
-  // ── 淡朱驿道（虚线）
-  g.strokeStyle = "rgba(170,60,44,.42)"; g.lineWidth = 2.4 * S; g.setLineDash([14 * S, 10 * S]);
+  // ── 驿道（淡墨虚线；红色只留给荔枝走的那条路）
+  g.strokeStyle = "rgba(92,70,48,.34)"; g.lineWidth = 2 * S; g.setLineDash([14 * S, 10 * S]);
   ROADS.forEach(([, pts], i) => { path(g, fractal(pts.map(([a, b]) => P(a, b)), 3, 0.18, 300 + i)); g.stroke(); });
   g.setLineDash([]);
 
@@ -148,7 +149,8 @@ export function drawMap(g) {
     } else if (lv === "关") {
       g.fillRect(x - 16 * S, y - 8 * S, 32 * S, 18 * S); g.strokeRect(x - 16 * S, y - 8 * S, 32 * S, 18 * S); g.beginPath(); g.moveTo(x - 20 * S, y - 8 * S); g.lineTo(x, y - 22 * S); g.lineTo(x + 20 * S, y - 8 * S); g.closePath(); g.fillStyle = "#7d3a2a"; g.fill(); g.stroke();
       g.fillStyle = INK; g.fillRect(x - 5 * S, y + 1 * S, 10 * S, 9 * S);
-    } else if (lv === "县") { g.beginPath(); g.arc(x, y, 9 * S, 0, Math.PI * 2); g.fill(); g.stroke(); }
+    } else if (lv === "岭") { /* 山口：不画城，只写名字（梅关的关楼是宋代才修的，唐代只有张九龄开的山路） */ }
+    else if (lv === "县") { g.beginPath(); g.arc(x, y, 9 * S, 0, Math.PI * 2); g.fill(); g.stroke(); }
     else { const s = 13 * S; g.fillRect(x - s, y - s, 2 * s, 2 * s); g.strokeRect(x - s, y - s, 2 * s, 2 * s); g.lineWidth = 1.4 * S; g.strokeRect(x - s + 4 * S, y - s + 4 * S, 2 * s - 8 * S, 2 * s - 8 * S); }
     const fs = (lv === "京" ? 96 : lv === "县" ? 54 : 66) * S;
     g.font = `${fs}px "Brush"`; g.textBaseline = "middle";
@@ -162,7 +164,7 @@ export function drawMap(g) {
     g.textAlign = "left";
   });
   const note = (lon, lat, lines) => { const [x, y] = P(lon, lat); g.fillStyle = "rgba(43,34,25,.7)"; g.font = `${40 * S}px "Brush"`; lines.forEach((ln, c) => [...ln].forEach((ch, i) => g.fillText(ch, x - c * 44 * S, y + i * 42 * S))); };
-  note(116.1, 25.7, ["五岭险阻", "唯梅关可度"]);
+  note(116.1, 25.7, ["五岭险阻", "开元四年", "凿大庾岭路"]);
   note(111.3, 30.9, ["过江", "调冰江陵"]);
   note(110.5, 34.85, ["商州道", "入关中"]);
   note(113.35, 22.75, ["从化", "荔枝所出"]);

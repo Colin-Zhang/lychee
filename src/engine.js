@@ -64,14 +64,19 @@ const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), comp);
 const compScene = new THREE.Scene(); compScene.add(quad);
 const compCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
+/** 把一个布景画进离屏缓冲：布景自己有 draw（比如立体山水要先画深度再勾墨线）就用它的 */
+function draw(s, target) {
+  if (s.draw) { s.draw(renderer, target); return; }
+  renderer.setRenderTarget(target); renderer.setClearColor(0x1a140d, 1); renderer.clear(); renderer.render(s.scene, s.camera);
+}
 /**
  * 画一帧。a / b 是布景：{ scene, camera, look: { blur, focus, band } }；mix 0–1 是从 a 转到 b 的进度（墨晕开）
  */
 export function renderFrame(a, b, mix, { time = 0, fade = 0, fadeCol = 0x000000, vig = 0.28, grain = 0.028 } = {}) {
-  renderer.setRenderTarget(rtA); renderer.setClearColor(0x1a140d, 1); renderer.clear(); renderer.render(a.scene, a.camera);
+  draw(a, rtA);
   const u = comp.uniforms;
   u.uBlurA.value = a.look?.blur ?? 0; u.uFocusA.value = a.look?.focus ?? 0.5; u.uBandA.value = a.look?.band ?? 0.18;
-  if (b && mix > 0) { renderer.setRenderTarget(rtB); renderer.clear(); renderer.render(b.scene, b.camera); u.uBlurB.value = b.look?.blur ?? 0; u.uFocusB.value = b.look?.focus ?? 0.5; u.uBandB.value = b.look?.band ?? 0.18; u.uMix.value = mix; }
+  if (b && mix > 0) { draw(b, rtB); u.uBlurB.value = b.look?.blur ?? 0; u.uFocusB.value = b.look?.focus ?? 0.5; u.uBandB.value = b.look?.band ?? 0.18; u.uMix.value = mix; }
   else u.uMix.value = 0;
   u.uTime.value = time; u.uFade.value = fade; u.uFadeCol.value.set(fadeCol); u.uVig.value = vig; u.uGrain.value = grain;
   renderer.setRenderTarget(null); renderer.render(compScene, compCam);
